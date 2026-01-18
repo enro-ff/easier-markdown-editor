@@ -1,0 +1,66 @@
+.editor-container {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+.editor-toolbar {
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background-color: #fafafa;
+}
+
+.editor-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor-pane.code-pane {
+  border-right: 1px solid #f0f0f0;
+}
+
+/* In split mode, borders might overlap, handled by CSS above */
+/* If single view, we might want to hide one */
+
+.hidden {
+  display: none !important;
+}
+
+.editor-textarea {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: none;
+  padding: 16px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  background-color: #fff;
+}
+
+.preview-area {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  overflow-y: auto;
+  background-color: #fff;
+}
+
+/* Optional: styling for the active button state is handled by Antd usually, 
+   but we can add custom if needed */

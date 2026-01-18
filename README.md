@@ -73,3 +73,19 @@ export default defineConfig([
   },
 ])
 ```
+
+
+# easier-markdown-editor
+
+## 项目介绍
+本项目使用vite + react + ts 构建，是一个简易的编写markdown文档的网站，致力于提供简单直观的markdown编写体验，方便新手编写。
+
+## 安装说明
+### 克隆仓库
+
+### 安装依赖
+
+### 启动项目
+
+## 文件结构
+
