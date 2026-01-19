@@ -1,18 +1,23 @@
-import { useState } from 'react';
-import { Radio, Splitter } from 'antd';
-import './MarkdownEditor.css';
+import { useState } from "react";
+import { Radio, Splitter } from "antd";
+import "./MarkdownEditor.css";
+import CodeMirror from "@uiw/react-codemirror";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { languages } from "@codemirror/language-data";
 
-type ViewMode = 'code' | 'split' | 'preview';
+type ViewMode = "code" | "split" | "preview";
 
 export default function MarkdownEditor() {
-  const [viewMode, setViewMode] = useState<ViewMode>('split');
-  const [markdown, setMarkdown] = useState<string>('# Hello Markdown\n\nEdit me on the left!');
+  const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const [markdownText, setMarkdownText] = useState<string>(
+    "# Hello Markdown\n\nEdit me on the left!",
+  );
 
   return (
     <div className="editor-container">
       <div className="editor-toolbar">
-        <Radio.Group 
-          value={viewMode} 
+        <Radio.Group
+          value={viewMode}
           onChange={(e) => setViewMode(e.target.value)}
           buttonStyle="solid"
         >
@@ -21,27 +26,27 @@ export default function MarkdownEditor() {
           <Radio.Button value="preview">Preview Only</Radio.Button>
         </Radio.Group>
       </div>
-      
+
       <Splitter className="editor-main">
-        {/* Code Pane */}
-        <div 
-          className={`editor-pane code-pane ${viewMode === 'preview' ? 'hidden' : ''}`}
-          style={{ width: viewMode === 'split' ? '50%' : '100%' }}
-        >
-          <textarea
-            className="editor-textarea"
-            value={markdown}
-            onChange={(e) => setMarkdown(e.target.value)}
-            placeholder="Type your markdown here..."
+        <div style={{ display: viewMode === "preview" ? "none" : "block", width: viewMode === "split" ? "50%" : "100%" }}>  
+          <CodeMirror
+          // className=".editor-textarea"
+            value={markdownText}
+            theme="light"
+            height="80%"
+            extensions={[markdown({ base: markdownLanguage, codeLanguages: languages })]}
+            onChange={(value) => {
+              setMarkdownText(value)
+              console.log("Markdown text changed:", value);
+            }}
           />
         </div>
-
         {/* Preview Pane */}
-        <div 
-          className={`editor-pane preview-pane ${viewMode === 'code' ? 'hidden' : ''}`}
-          style={{ width: viewMode === 'split' ? '50%' : '100%' }}
+        <div
+          className={`editor-pane preview-pane ${viewMode === "code" ? "hidden" : ""}`}
+          style={{ width: viewMode === "split" ? "50%" : "100%" }}
         >
-          <div 
+          <div
             className="preview-area"
             contentEditable={true} // Meeting the requirement "both can be edited"
             suppressContentEditableWarning={true}
@@ -57,7 +62,7 @@ export default function MarkdownEditor() {
             <h1>Preview Area</h1>
             <p>This area is editable as requested.</p>
             <hr />
-            <pre>{markdown}</pre>
+            <pre>{markdownText}</pre>
           </div>
         </div>
       </Splitter>
