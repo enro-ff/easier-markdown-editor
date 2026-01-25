@@ -1,7 +1,7 @@
 import { Layout, Button, Space } from 'antd'
 import { GithubOutlined } from '@ant-design/icons'
-import MarkdownEditor from './components/MarkdownEditor/MarkdownEditor'
-import GiteeIcon from './components/Icons/GiteeIcon'
+import EditorView from './components/EditorView/EditorView'
+import GiteeIcon from './Icons/GiteeIcon'
 import './App.css'
 const { Header, Content, Footer } = Layout;
 
@@ -32,8 +32,8 @@ function App() {
           </Button>
         </Space>
       </Header>
-      <Content style={{ padding: '24px', overflow: 'hidden' }}>
-        <MarkdownEditor />
+      <Content style={{ padding: '24px', overflow: 'hidden',display:'block', height: '80vh' }}>
+        <EditorView />
       </Content>
       <Footer style={{ textAlign: 'center' }}>
         Easier Markdown Editor ©{new Date().getFullYear()} Created by ffxd

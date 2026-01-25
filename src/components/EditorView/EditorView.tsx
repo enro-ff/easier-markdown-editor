@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Radio, Splitter } from "antd";
-import "./MarkdownEditor.css";
+import "./EditorView.css";
 import CodeMirror from "@uiw/react-codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { history } from "@codemirror/commands"
 import { languages } from "@codemirror/language-data";
+import PreviewEditor from "../PreviewEditor/PreviewEditor";
 
 type ViewMode = "code" | "split" | "preview";
 
-export default function MarkdownEditor() {
+export default function EditorView() {
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [markdownText, setMarkdownText] = useState<string>(
     "# Hello Markdown\n\nEdit me on the left!",
@@ -28,42 +30,45 @@ export default function MarkdownEditor() {
       </div>
 
       <Splitter className="editor-main">
-        <div style={{ display: viewMode === "preview" ? "none" : "block", width: viewMode === "split" ? "50%" : "100%" }}>  
+        <div
+          style={{
+            display: viewMode === "preview" ? "none" : "block",
+            width: viewMode === "split" ? "50%" : "100%",
+          }}
+        >
           <CodeMirror
-          // className=".editor-textarea"
+            // className=".editor-textarea"
             value={markdownText}
             theme="light"
-            height="80%"
-            extensions={[markdown({ base: markdownLanguage, codeLanguages: languages })]}
+            extensions={[
+              markdown({ base: markdownLanguage, codeLanguages: languages }),
+              history()
+            ]}
             onChange={(value) => {
-              setMarkdownText(value)
+              setMarkdownText(value);
               console.log("Markdown text changed:", value);
             }}
           />
         </div>
         {/* Preview Pane */}
         <div
-          className={`editor-pane preview-pane ${viewMode === "code" ? "hidden" : ""}`}
+          className={`${viewMode === "code" ? "hidden" : ""}`}
           style={{ width: viewMode === "split" ? "50%" : "100%" }}
         >
-          <div
+          {/* <div
             className="preview-area"
             contentEditable={true} // Meeting the requirement "both can be edited"
             suppressContentEditableWarning={true}
           >
-            {/* 
-              In a real app, you would render the markdown here. 
-              Since the user said "no need to generate markdown parsing syntax",
-              we just show a placeholder or the raw text for now, 
-              or a simple message indicating where the preview goes.
-              However, to make it look "static" but functional, let's just show the text 
-              or a dummy rendered view.
-            */}
             <h1>Preview Area</h1>
             <p>This area is editable as requested.</p>
             <hr />
             <pre>{markdownText}</pre>
-          </div>
+          </div> */}
+          <PreviewEditor 
+            markdownText={markdownText}
+            setMarkdownText={(value) => setMarkdownText(value)}
+          />
         </div>
       </Splitter>
     </div>
