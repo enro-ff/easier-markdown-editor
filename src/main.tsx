@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 
+
 import zhCN from "antd/locale/zh_CN";
 import "dayjs/locale/zh-cn";
 import { ConfigProvider } from "antd";
