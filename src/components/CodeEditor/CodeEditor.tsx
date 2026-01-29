@@ -24,6 +24,7 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
         ScrollEvt,
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         history(),
+        EditorView.lineWrapping
       ]}
       onChange={(value) => {
         props.setMarkdownText(value);
@@ -31,10 +32,10 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
       onCreateEditor={(view) => {
         CodeEditorRef.current = view;
         props.handleScrollInstance.createCodeEditor(CodeEditorRef);
-        console.log(ScrollEvt);
       }}
       height="100%"
-      style={{ height: "100%" }}
+      width="100%"
+      style={{ height: "100%", width: "100%" }}
     />
   );
 };

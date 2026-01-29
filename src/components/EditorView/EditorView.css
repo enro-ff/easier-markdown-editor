@@ -1,6 +1,8 @@
 /* EditorView.css */
 .editor-container {
   height: calc(100% - 32px);
+  margin: 0 auto;
+  width : 90vw;
 }
 .editor-toolbar {
   height: 32px;
