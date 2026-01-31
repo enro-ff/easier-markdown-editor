@@ -5,7 +5,7 @@ import { languages } from "@codemirror/language-data";
 import HandleScroll from "../../utils/handleScroll";
 import { EditorView } from "@codemirror/view";
 import * as events from "@uiw/codemirror-extensions-events";
-import { mdWYSIWYGPlugin } from "../../extentions/mdWYSIWYG";
+import { PreviewThemeExtension } from "./extensions/mdWYSIWYG";
 
 const PreviewEditor: React.FC<PreviewEditorProps> = (props) => {
   const PreviewEditorRef = useRef<EditorView | null>(null);
@@ -20,14 +20,13 @@ const PreviewEditor: React.FC<PreviewEditorProps> = (props) => {
     <CodeMirror
       value={props.markdownText}
       extensions={[
-        mdWYSIWYGPlugin,
+        PreviewThemeExtension(),
         ScrollEvt,
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         EditorView.lineWrapping,
       ]}
       onChange={(value) => {
         props.setMarkdownText(value);
-        console.log("Markdown text changed:", value);
       }}
       onCreateEditor={(view) => {
         PreviewEditorRef.current = view;

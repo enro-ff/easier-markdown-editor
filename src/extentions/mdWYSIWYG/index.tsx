@@ -38,7 +38,6 @@ class H1Widget extends WidgetType {
   toDOM(): HTMLElement {
     const h1Element = document.createElement("h1");
     h1Element.textContent = this.titletext;
-    console.log('1')  
     return h1Element;
   }
 
