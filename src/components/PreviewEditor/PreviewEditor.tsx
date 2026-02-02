@@ -21,7 +21,7 @@ const PreviewEditor: React.FC<PreviewEditorProps> = (props) => {
       value={props.markdownText}
       extensions={[
         PreviewThemeExtension(),
-        ScrollEvt,
+        // ScrollEvt,
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         EditorView.lineWrapping,
       ]}

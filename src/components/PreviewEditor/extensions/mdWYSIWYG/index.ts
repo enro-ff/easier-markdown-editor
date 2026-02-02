@@ -43,7 +43,6 @@ const headerViewPlugin = ViewPlugin.fromClass(
     }
   },
   {
-    
     decorations: (v) =>{
       return v.decorations}
   }
