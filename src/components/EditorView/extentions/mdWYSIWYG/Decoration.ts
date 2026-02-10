@@ -1,22 +1,62 @@
-import { Decoration, EditorView } from "@codemirror/view";
+import { Decoration, EditorView, WidgetType } from "@codemirror/view";
+
+class nonWigdget extends WidgetType {
+  constructor() {
+    super();
+  }
+
+  toDOM() {
+    const div = document.createElement("div");
+    div.className = "cm-non";
+    return div;
+  }
+
+  ignoreEvent() {
+    return true
+  }
+}
+
+class imageWidget extends WidgetType {
+  private src: string = ""
+  private alt: string = ""
+  private title: string = ""
+  constructor(src:string, alt?:string, title?:string) {
+    super();
+    this.src = src;
+    this.alt = alt||"";
+    this.title = title||"";
+  }
+
+  toDOM() {
+    const img = document.createElement("img");
+    img.src = this.src;
+    img.alt = this.alt;
+    img.title = this.title;
+    img.style.maxWidth = "100%";
+    return img;
+  }
+
+  ignoreEvent() {
+    return true
+  }
+}
 
 // 标题+文本样式主题：baseTheme 定义所有样式，保留原有格式+新增文本样式
-const headerTheme = EditorView.baseTheme({
+const mdPreviewTheme = EditorView.baseTheme({
   // 辅助隐藏类（保留原需求）
-  ".cm-non": { visibility: "hidden"},
+  ".cm-non": { display: "none", width: 0, height: 0 ,padding: 0,margin: 0, pointerEvent: 'none'},
+  ".cm-invisible": { visibility: "hidden" },
   // 所有标题公共样式（原生粗体/间距/行高/继承性）
   ".cm-header": {
-    fontWeight: "bold",
     color: "inherit",
-    fontSize: "inherit",
   },
   // H1-H6 单独字号定义（严格遵循浏览器原生比例）
-  ".cm-H1": { fontSize: "2em", lineHeight: "2em" }, // 2em字号配1.2em行高，不拥挤
-  ".cm-H2": { fontSize: "1.5em", lineHeight: "1.5em" },
-  ".cm-H3": { fontSize: "1.17em", lineHeight: "1.17em" },
-  ".cm-H4": { fontSize: "1em", lineHeight: "1.em" },
-  ".cm-H5": { fontSize: "0.83em", lineHeight: "0.83em" },
-  ".cm-H6": { fontSize: "0.67em", lineHeight: "0.67em" },
+  ".cm-H1": { fontSize: "2em", lineHeight: "3em" },
+  ".cm-H2": { fontSize: "1.5em", lineHeight: "2.5em" },
+  ".cm-H3": { fontSize: "1.17em", lineHeight: "2.17em" },
+  ".cm-H4": { fontSize: "1em", lineHeight: "2em" },
+  ".cm-H5": { fontSize: "0.83em", lineHeight: "1.83em" },
+  ".cm-H6": { fontSize: "0.67em", lineHeight: "1.67em" },
   // 下划线样式（还原浏览器原生<u>标签样式）
   ".cm-underline": {
     textDecoration: "underline solid currentColor",
@@ -48,9 +88,13 @@ const H5Decoration = Decoration.line({ class: "cm-header cm-H5" });
 const H6Decoration = Decoration.line({ class: "cm-header cm-H6" });
 //文本样式标记装饰器（行内局部文本生效，与原生标签布局一致）
 const underlineDecoration = Decoration.mark({ class: "cm-underline" });
-const boldDecoration = Decoration.mark({ class: "cm-bold" });
-const italicDecoration = Decoration.mark({ class: "cm-italic" });
-const strikethroughDecoration = Decoration.mark({ class: "cm-strikethrough" });
+const invisibleDecoration = Decoration.mark({ class: "cm-invisible" });
+const nonWidgetDecoration = Decoration.replace({});
+function imageDecoration(src: string, alt?: string, title?: string){
+  const widget = new imageWidget(src, alt, title);
+  const deco = Decoration.replace({ widget });
+  return deco
+}
 
 // 完整装饰器对象
 const nodeDecoration = {
@@ -62,12 +106,9 @@ const nodeDecoration = {
   H5: H5Decoration,
   H6: H6Decoration,
   underline: underlineDecoration,
-  bold: boldDecoration,
-  italic: italicDecoration,
-  strikethrough: strikethroughDecoration,
+  invisible: invisibleDecoration,
+  nonWidget: nonWidgetDecoration,
+  imageDecoration: imageDecoration
 };
 
-export {
-  headerTheme,
-  nodeDecoration,
-};
+export { mdPreviewTheme, nodeDecoration };

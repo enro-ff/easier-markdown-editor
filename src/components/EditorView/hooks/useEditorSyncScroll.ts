@@ -38,13 +38,6 @@ export function useEditorSyncScroll(editorRefs: EditorRefs) {
       const offset = lineScrollRatio * sideLineHeight;
       const sideTop = offset < 1 ? sideLineTop : sideLineTop + offset;
 
-      console.log(
-        "同步滚动",
-        targetView,
-        sideView,
-        targetView.state.doc.lines === sideView.state.doc.lines,
-      );
-      
       sideDOM.scrollTop = sideTop;
     } catch (e) {
       console.log("同步滚动错误", e); //codemirror内部api可能报错

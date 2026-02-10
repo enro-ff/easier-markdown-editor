@@ -3,12 +3,14 @@ import { Radio, Splitter } from "antd";
 import "./EditorView.css";
 import { useEditorSyncScroll } from "./hooks/useEditorSyncScroll";
 import { history } from "@codemirror/commands";
-import { Annotation, EditorState } from "@codemirror/state";
+import { Annotation, ChangeSet, EditorState, type ChangeSpec, type TransactionSpec } from "@codemirror/state";
 import { Transaction, type Extension } from "@codemirror/state";
-import { EditorView, ViewPlugin } from "@codemirror/view";
-import { markdown } from "@codemirror/lang-markdown";
+import { EditorView, keymap, ViewPlugin } from "@codemirror/view";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { defaultHighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
+import { PreviewThemeExtension } from "./extentions/mdWYSIWYG/index";
+import  {defaultKeymap,historyKeymap} from '@codemirror/commands'
 
 type ViewMode = "code" | "split" | "preview";
 
@@ -25,6 +27,32 @@ function syncDispatch(main: EditorView, other: EditorView, tr: Transaction) {
   }
 }
 
+// const deleteFilter = EditorState.transactionFilter.of((tr) => {
+//   const changes: ChangeSpec[] = []
+//   console.log(tr.annotation(Transaction.addToHistory))
+//   if(!tr.changes.empty && !tr.annotation(syncAnnotation)){
+//     tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+//       console.log(fromA,toA,fromB,toB,inserted)
+//       console.log(tr.startState)
+//       if(fromA === fromB ) {
+//         syntaxTree(tr.startState).iterate({
+//           from: fromA,
+//           to: toA,
+//           enter: (node) => {
+//             console.log(node.to,node.name)
+//             if(node.name === "StrikethroughMark" && node.to === toA && fromA+1 === toA){
+//               tr.isUserEvent("redo")
+//               const newFrom = node.from - 2
+//               changes.push({from:newFrom, to:node.from, insert:inserted})
+//               console.log(changes)
+//             }
+//           }
+//         })
+//       }
+//     })
+//   }
+//   return changes.length?[ {changes ,annotations:tr.annotation   }]: tr;
+// })
 export default function MDEditor() {
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const previewEditorViewRef = useRef<EditorView | null>(null);
@@ -42,7 +70,6 @@ export default function MDEditor() {
       eventHandlers: {
         scroll: (e) => {
           handleSyncScroll(e);
-          console.log("1")
         },
       },
     });
@@ -50,21 +77,24 @@ export default function MDEditor() {
   const CreateEditorState = (extensions?: Array<Extension>): EditorState => {
     const defaultextensions = [
       EditorView.lineWrapping,
-      markdown({ codeLanguages: languages }),
+      markdown({ codeLanguages: languages, base: markdownLanguage }),
       handleScroll(),
+      syntaxHighlighting(defaultHighlightStyle)
     ];
     const fullextensions = extensions
       ? [...defaultextensions, ...extensions]
       : [...defaultextensions];
     return EditorState.create({
-      doc: '# Mini Markdown Editor\n## 介绍\nMini Markdown Editor 是 2025年寒假字节青训营「前端」的一个开源项目。\n\n## 架构\n该项目采用 `pnpm` + `monorepo` 进行管理，包含两个核心子项目：\n- `@mini-markdown-rc/ast-parser`：核心库，实现 Markdown 语法的 AST 解析器，用于解析 Markdown 文本，生成 AST、HTML。\n- `@mini-markdown-rc/editor`：一款 React 的 Markdown 编辑器。\n## 优点\n简单易用、轻量、性能高，十万➕内容依然流畅。\n# 快速开始\n## 安装\n```bash\n# npm\nnpm install @mini-markdown-rc/editor\n# yarn\nyarn add install @mini-markdown-rc/editor\n# pnpm\npnpm add install @mini-markdown-rc/editor\n```\n## 使用\n```tsx\nimport { Editor } from "@mini-markdown-rc/editor";\nexport default function App() {\nreturn <Editor />;\n}\n``` ',
+      doc: '<img src="url" alt="foo" /> ',
       extensions: fullextensions,
     });
   };
 
+  const codekeymap = keymap.of([defaultKeymap, historyKeymap])
+
   useEffect(() => {
     const codeEditorView = new EditorView({
-      state: CreateEditorState([history(),      syntaxHighlighting(defaultHighlightStyle),]),
+      state: CreateEditorState([history(),codekeymap]),
       parent: codeContainerRef.current,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
@@ -78,7 +108,7 @@ export default function MDEditor() {
     });
 
     const previewEditorView = new EditorView({
-      state: CreateEditorState(),
+      state: CreateEditorState([PreviewThemeExtension()]),
       parent: previewContainerRef.current,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
@@ -122,13 +152,12 @@ export default function MDEditor() {
             display: viewMode === "preview" ? "none" : "block",
             width: viewMode === "split" ? "50%" : "100%",
           }}
-          ref={codeContainerRef}
+          ref={codeContainerRef}// eslint-disable-line no-eval
         ></div>
-        {/* Preview Pane */}
         <div
           className={`${viewMode === "code" ? "hidden" : ""}`}
           style={{ width: viewMode === "split" ? "50%" : "100%" }}
-          ref={previewContainerRef}
+          ref={previewContainerRef}// eslint-disable-line no-eval
         ></div>
       </Splitter>
     </div>
