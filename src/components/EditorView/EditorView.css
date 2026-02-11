@@ -7,7 +7,8 @@
 .editor-toolbar {
   height: 32px;
   display:flex;
-  flex-direction: row-reverse;
+  flex-direction: row;
+  align-items: center;
 }
 
 .cm-editor {
@@ -18,6 +19,9 @@
   text-decoration: none
 }
 
+.changeViewRadio{
+  margin-left: auto
+}
 
 
 

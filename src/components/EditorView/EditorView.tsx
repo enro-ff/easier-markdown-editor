@@ -3,29 +3,27 @@ import { Radio, Splitter } from "antd";
 import "./EditorView.css";
 import { useEditorSyncScroll } from "./hooks/useEditorSyncScroll";
 import { history } from "@codemirror/commands";
-import { Annotation, ChangeSet, EditorState, type ChangeSpec, type TransactionSpec } from "@codemirror/state";
+import {
+  Annotation,
+  ChangeSet,
+  EditorState,
+  type ChangeSpec,
+  type TransactionSpec,
+} from "@codemirror/state";
 import { Transaction, type Extension } from "@codemirror/state";
 import { EditorView, keymap, ViewPlugin } from "@codemirror/view";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { defaultHighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
+import {
+  defaultHighlightStyle,
+  syntaxHighlighting,
+  syntaxTree,
+} from "@codemirror/language";
 import { PreviewThemeExtension } from "./extentions/mdWYSIWYG/index";
-import  {defaultKeymap,historyKeymap} from '@codemirror/commands'
+import { defaultKeymap, historyKeymap } from "@codemirror/commands";
+import FileDropDown from "./Component/FileDropdown/FileDropdown";
 
 type ViewMode = "code" | "split" | "preview";
-
-const syncAnnotation = Annotation.define<boolean>();
-function syncDispatch(main: EditorView, other: EditorView, tr: Transaction) {
-  main.update([tr]);
-  if (!tr.changes.empty && !tr.annotation(syncAnnotation)) {
-    const annotations: Annotation<boolean | string>[] = [
-      syncAnnotation.of(true),
-    ];
-    const userEvent = tr.annotation(Transaction.userEvent);
-    if (userEvent) annotations.push(Transaction.userEvent.of(userEvent));
-    other.dispatch({ changes: tr.changes, annotations });
-  }
-}
 
 // const deleteFilter = EditorState.transactionFilter.of((tr) => {
 //   const changes: ChangeSpec[] = []
@@ -59,6 +57,24 @@ export default function MDEditor() {
   const codeEditorViewRef = useRef<EditorView | null>(null);
   const codeContainerRef = useRef<HTMLElement>(undefined);
   const previewContainerRef = useRef<HTMLElement>(undefined);
+  const [initialContent, setInitialContent] = useState<string>(
+    `<img src="url" alt="foo" />`,
+  );
+  const contentRef = useRef<string>("");
+
+  const syncAnnotation = Annotation.define<boolean>();
+  function syncDispatch(main: EditorView, other: EditorView, tr: Transaction) {
+    main.update([tr]);
+    if (!tr.changes.empty && !tr.annotation(syncAnnotation)) {
+      contentRef.current = main.state.doc.toString();
+      const annotations: Annotation<boolean | string>[] = [
+        syncAnnotation.of(true),
+      ];
+      const userEvent = tr.annotation(Transaction.userEvent);
+      if (userEvent) annotations.push(Transaction.userEvent.of(userEvent));
+      other.dispatch({ changes: tr.changes, annotations });
+    }
+  }
 
   const handleSyncScroll = useEditorSyncScroll({
     codeEditorViewRef,
@@ -74,27 +90,32 @@ export default function MDEditor() {
       },
     });
 
-  const CreateEditorState = (extensions?: Array<Extension>): EditorState => {
+  const CreateEditorState = (
+    doc: string,
+    extensions?: Array<Extension>,
+  ): EditorState => {
+    console.log(doc);
     const defaultextensions = [
       EditorView.lineWrapping,
       markdown({ codeLanguages: languages, base: markdownLanguage }),
       handleScroll(),
-      syntaxHighlighting(defaultHighlightStyle)
+      syntaxHighlighting(defaultHighlightStyle),
     ];
     const fullextensions = extensions
       ? [...defaultextensions, ...extensions]
       : [...defaultextensions];
     return EditorState.create({
-      doc: '<img src="url" alt="foo" /> ',
+      doc: doc,
       extensions: fullextensions,
     });
   };
 
-  const codekeymap = keymap.of([defaultKeymap, historyKeymap])
+  const codekeymap = keymap.of([defaultKeymap, historyKeymap]);
 
   useEffect(() => {
+    console.log("useEffect");
     const codeEditorView = new EditorView({
-      state: CreateEditorState([history(),codekeymap]),
+      state: CreateEditorState(initialContent, [history(), codekeymap]),
       parent: codeContainerRef.current,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
@@ -108,7 +129,7 @@ export default function MDEditor() {
     });
 
     const previewEditorView = new EditorView({
-      state: CreateEditorState([PreviewThemeExtension()]),
+      state: CreateEditorState(initialContent, [PreviewThemeExtension()]),
       parent: previewContainerRef.current,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
@@ -130,15 +151,20 @@ export default function MDEditor() {
       codeEditorViewRef.current = null;
       previewEditorViewRef.current = null;
     };
-  }, []);
+  }, [initialContent]);
 
   return (
     <div className="editor-container">
       <div className="editor-toolbar">
+        <FileDropDown
+          contentRef={contentRef}
+          setInitialContent={setInitialContent}
+        />
         <Radio.Group
           value={viewMode}
           onChange={(e) => setViewMode(e.target.value)}
           buttonStyle="solid"
+          className="changeViewRadio"
         >
           <Radio.Button value="code">Code Only</Radio.Button>
           <Radio.Button value="split">Split View</Radio.Button>
@@ -152,12 +178,14 @@ export default function MDEditor() {
             display: viewMode === "preview" ? "none" : "block",
             width: viewMode === "split" ? "50%" : "100%",
           }}
-          ref={codeContainerRef}// eslint-disable-line no-eval
+          ref={codeContainerRef} // eslint-disable-line no-eval
         ></div>
         <div
-          className={`${viewMode === "code" ? "hidden" : ""}`}
-          style={{ width: viewMode === "split" ? "50%" : "100%" }}
-          ref={previewContainerRef}// eslint-disable-line no-eval
+          style={{
+            display: viewMode === "code" ? "none" : "block",
+            width: viewMode === "split" ? "50%" : "100%",
+          }}
+          ref={previewContainerRef} // eslint-disable-line no-eval
         ></div>
       </Splitter>
     </div>
