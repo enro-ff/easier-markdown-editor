@@ -48,6 +48,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
                     newFile();
                     setInitialContent("");
                     setFilename("无标题.md");
+                    setIsSaved(true);
                   }}
                 >
                   new
@@ -62,6 +63,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
                     const { contents, fileName } = await openFile();
                     setInitialContent(contents);
                     setFilename(fileName);
+                    setIsSaved(true);
                   }}
                 >
                   open
@@ -75,6 +77,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
                   onClick={async () => {
                     const { fileName } = await saveFile(contentRef.current);
                     if (fileName) setFilename(fileName);
+                    setIsSaved(true);
                   }}
                 >
                   Save
