@@ -61,12 +61,16 @@ export default function MDEditor() {
     `<img src="url" alt="foo" />`,
   );
   const contentRef = useRef<string>("");
+  const fileDropDownRef = useRef<{updateIsSaved: () => void}>(null);
 
   const syncAnnotation = Annotation.define<boolean>();
   function syncDispatch(main: EditorView, other: EditorView, tr: Transaction) {
     main.update([tr]);
     if (!tr.changes.empty && !tr.annotation(syncAnnotation)) {
       contentRef.current = main.state.doc.toString();
+      if (fileDropDownRef.current && tr.docChanged) {
+        fileDropDownRef.current.updateIsSaved();
+      }
       const annotations: Annotation<boolean | string>[] = [
         syncAnnotation.of(true),
       ];
@@ -157,6 +161,7 @@ export default function MDEditor() {
     <div className="editor-container">
       <div className="editor-toolbar">
         <FileDropDown
+          ref={fileDropDownRef}
           contentRef={contentRef}
           setInitialContent={setInitialContent}
         />

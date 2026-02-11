@@ -12,19 +12,19 @@ class nonWigdget extends WidgetType {
   }
 
   ignoreEvent() {
-    return true
+    return true;
   }
 }
 
 class imageWidget extends WidgetType {
-  private src: string = ""
-  private alt: string = ""
-  private title: string = ""
-  constructor(src:string, alt?:string, title?:string) {
+  private src: string = "";
+  private alt: string = "";
+  private title: string = "";
+  constructor(src: string, alt?: string, title?: string) {
     super();
     this.src = src;
-    this.alt = alt||"";
-    this.title = title||"";
+    this.alt = alt || "";
+    this.title = title || "";
   }
 
   toDOM() {
@@ -36,15 +36,30 @@ class imageWidget extends WidgetType {
     return img;
   }
 
+  eq(other: imageWidget) {
+    return (
+      this.src === other.src &&
+      this.alt === other.alt &&
+      this.title === other.title
+    );
+  }
+
   ignoreEvent() {
-    return true
+    return true;
   }
 }
 
 // 标题+文本样式主题：baseTheme 定义所有样式，保留原有格式+新增文本样式
 const mdPreviewTheme = EditorView.baseTheme({
   // 辅助隐藏类（保留原需求）
-  ".cm-non": { display: "none", width: 0, height: 0 ,padding: 0,margin: 0, pointerEvent: 'none'},
+  ".cm-non": {
+    display: "none",
+    width: 0,
+    height: 0,
+    padding: 0,
+    margin: 0,
+    pointerEvent: "none",
+  },
   ".cm-invisible": { visibility: "hidden" },
   // 所有标题公共样式（原生粗体/间距/行高/继承性）
   ".cm-header": {
@@ -90,10 +105,10 @@ const H6Decoration = Decoration.line({ class: "cm-header cm-H6" });
 const underlineDecoration = Decoration.mark({ class: "cm-underline" });
 const invisibleDecoration = Decoration.mark({ class: "cm-invisible" });
 const nonWidgetDecoration = Decoration.replace({});
-function imageDecoration(src: string, alt?: string, title?: string){
+function imageDecoration(src: string, alt?: string, title?: string) {
   const widget = new imageWidget(src, alt, title);
   const deco = Decoration.replace({ widget });
-  return deco
+  return deco;
 }
 
 // 完整装饰器对象
@@ -108,7 +123,7 @@ const nodeDecoration = {
   underline: underlineDecoration,
   invisible: invisibleDecoration,
   nonWidget: nonWidgetDecoration,
-  imageDecoration: imageDecoration
+  imageDecoration: imageDecoration,
 };
 
 export { mdPreviewTheme, nodeDecoration };
