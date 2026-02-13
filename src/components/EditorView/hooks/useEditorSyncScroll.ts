@@ -36,7 +36,7 @@ export function useEditorSyncScroll(editorRefs: EditorRefs) {
         sideView.lineBlockAt(targetLineNumber).bottom - sideLineTop;
 
       const offset = lineScrollRatio * sideLineHeight;
-      const sideTop = offset < 1 ? sideLineTop : sideLineTop + offset;
+      const sideTop = offset < 1 ? sideLineTop : sideLineTop + offset;//忽略微小误差，保持行对齐
 
       sideDOM.scrollTop = sideTop;
     } catch (e) {

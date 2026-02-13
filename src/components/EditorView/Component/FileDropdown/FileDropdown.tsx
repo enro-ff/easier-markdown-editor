@@ -19,10 +19,9 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
   contentRef,
   setInitialContent,
 }) => {
-  const { newFile, openFile, saveFile, saveFileAs, isOpenedFile } =
-    useFileSave();
+  const { fileName, newFile, openFile, saveFile, saveFileAs, isPermitted, getPerimisson } =
+    useFileSave(setInitialContent);
 
-  const [Filename, setFilename] = useState<string>("无标题.md");
   const [isSaved, setIsSaved] = useState<boolean>(true);
 
   useImperativeHandle(ref, () => {
@@ -37,6 +36,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
 
   return (
     <>
+     <button onClick = {getPerimisson}>授权</button>
       <Dropdown
         menu={{
           items: [
@@ -46,8 +46,6 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
                 <a
                   onClick={async () => {
                     newFile();
-                    setInitialContent("");
-                    setFilename("无标题.md");
                     setIsSaved(true);
                   }}
                 >
@@ -60,9 +58,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
               label: (
                 <a
                   onClick={async () => {
-                    const { contents, fileName } = await openFile();
-                    setInitialContent(contents);
-                    setFilename(fileName);
+                    openFile()
                     setIsSaved(true);
                   }}
                 >
@@ -75,23 +71,22 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
               label: (
                 <a
                   onClick={async () => {
-                    const { fileName } = await saveFile(contentRef.current);
-                    if (fileName) setFilename(fileName);
+                    await saveFile(contentRef.current);
                     setIsSaved(true);
                   }}
                 >
                   Save
                 </a>
               ),
-              disabled: !isOpenedFile,
+              disabled: !isPermitted,
             },
             {
               key: "4",
               label: (
                 <a
                   onClick={async () => {
-                    const { fileName } = await saveFileAs(contentRef.current);
-                    if (fileName) setFilename(fileName);
+                    await saveFileAs(contentRef.current);
+                    setIsSaved(true);
                   }}
                 >
                   Save As
@@ -108,7 +103,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
           </Space>
         </a>
       </Dropdown>
-      <p className="filename">{Filename}{isSaved ? "" : "*(unsaved)"}</p>
+      <p className="filename">{fileName}{isSaved ? "" : "*(unsaved)"}</p>
     </>
   );
 };

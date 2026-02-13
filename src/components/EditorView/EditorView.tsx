@@ -60,7 +60,7 @@ export default function MDEditor() {
   const [initialContent, setInitialContent] = useState<string>(
     `<img src="url" alt="foo" />`,
   );
-  const contentRef = useRef<string>("");
+  const contentRef = useRef<string>(initialContent);
   const fileDropDownRef = useRef<{updateIsSaved: () => void}>(null);
 
   const syncAnnotation = Annotation.define<boolean>();
@@ -98,7 +98,6 @@ export default function MDEditor() {
     doc: string,
     extensions?: Array<Extension>,
   ): EditorState => {
-    console.log(doc);
     const defaultextensions = [
       EditorView.lineWrapping,
       markdown({ codeLanguages: languages, base: markdownLanguage }),
@@ -117,7 +116,6 @@ export default function MDEditor() {
   const codekeymap = keymap.of([defaultKeymap, historyKeymap]);
 
   useEffect(() => {
-    console.log("useEffect");
     const codeEditorView = new EditorView({
       state: CreateEditorState(initialContent, [history(), codekeymap]),
       parent: codeContainerRef.current,
@@ -148,6 +146,7 @@ export default function MDEditor() {
 
     codeEditorViewRef.current = codeEditorView;
     previewEditorViewRef.current = previewEditorView;
+    contentRef.current = initialContent
 
     return () => {
       codeEditorView.destroy();
