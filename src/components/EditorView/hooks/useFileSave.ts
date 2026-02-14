@@ -5,7 +5,7 @@ export function useFileSave(
   setInitialContent: Dispatch<React.SetStateAction<string>>,
 ) {
   const [isPermitted, setIsPermitted] = useState<boolean>(false);
-  const [fileName, setFileName] = useState<string>("");
+  const [fileName, setFileName] = useState<string>("untitled.md");
   const filehandle = useRef<FileSystemFileHandle | null>(null);
   const dbRef = useRef<IDBDatabase | null>(null);
 
@@ -116,6 +116,7 @@ export function useFileSave(
   };
   return {
     fileName,
+    setFileName,
     newFile,
     openFile,
     saveFileAs,
