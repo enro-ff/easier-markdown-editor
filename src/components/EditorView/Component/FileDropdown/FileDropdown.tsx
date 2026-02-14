@@ -1,6 +1,7 @@
 import React, {
   useImperativeHandle,
   useState,
+  useEffect,
   type Dispatch,
   type RefObject,
 } from "react";
@@ -10,7 +11,7 @@ import { useFileSave } from "../../hooks/useFileSave";
 import "./FileDropdown.css";
 
 interface FileDropDownProps {
-  ref: React.Ref<{updateIsSaved: () => void}>;
+  ref: React.Ref<{ updateIsSaved: () => void }>;
   contentRef: RefObject<string>;
   setInitialContent: Dispatch<React.SetStateAction<string>>;
 }
@@ -19,8 +20,15 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
   contentRef,
   setInitialContent,
 }) => {
-  const { fileName, newFile, openFile, saveFile, saveFileAs, isPermitted, getPerimisson } =
-    useFileSave(setInitialContent);
+  const {
+    fileName,
+    newFile,
+    openFile,
+    saveFile,
+    saveFileAs,
+    isPermitted,
+    getPerimisson,
+  } = useFileSave(setInitialContent);
 
   const [isSaved, setIsSaved] = useState<boolean>(true);
 
@@ -34,9 +42,19 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
     };
   });
 
+  useEffect(() => {
+    //定时保存当前内容到localStorage里，防止用户误操作导致内容丢失
+    const timer = setInterval(() => {
+      if (!isSaved) {
+        localStorage.setItem("content", contentRef.current);
+      }
+    });
+    return () => {
+      clearInterval(timer)
+    }
+  });
   return (
     <>
-     <button onClick = {getPerimisson}>授权</button>
       <Dropdown
         menu={{
           items: [
@@ -58,7 +76,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
               label: (
                 <a
                   onClick={async () => {
-                    openFile()
+                    openFile();
                     setIsSaved(true);
                   }}
                 >
@@ -103,7 +121,11 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
           </Space>
         </a>
       </Dropdown>
-      <p className="filename">{fileName}{isSaved ? "" : "*(unsaved)"}</p>
+      <p className="filename">
+        {fileName}
+        {isSaved ? "" : "*(unsaved)"}
+        {isPermitted || <button onClick={getPerimisson}>授权</button>}
+      </p>
     </>
   );
 };

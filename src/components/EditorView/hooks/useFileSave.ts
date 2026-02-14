@@ -14,11 +14,17 @@ export function useFileSave(
     const contents = await (await handle.getFile()).text();
     setFileName(handle.name);
     setInitialContent(contents);
+    const localContent = localStorage.getItem("content");
+    if(localContent !== contents) {
+      localStorage.setItem("content", contents);
+    }
   };
 
   const checkPermission = async (handle: FileSystemFileHandle) => {
     const query = await handle.queryPermission({});
-    setIsPermitted(query === "granted");
+    const permission = query === "granted";
+    setIsPermitted(permission);
+    console.log(isPermitted);
   };
 
   const storeFileHandleChange = (handle: FileSystemFileHandle | null) => {
@@ -44,14 +50,18 @@ export function useFileSave(
       const objStoreRequest = request.result
         .transaction("handles")
         .objectStore("handles")
-        .getAll();
+        .get("111");
       objStoreRequest.onsuccess = () => {
         console.log(objStoreRequest.result);
-        if (objStoreRequest.result.length > 0) {
-          const handle = objStoreRequest.result[0].handle;
+        if (objStoreRequest.result && objStoreRequest.result.handle) {
+          const handle = objStoreRequest.result.handle;
           filehandle.current = handle;
           checkPermission(handle);
-          readFileHandle(handle);
+          const content = localStorage.getItem("content")
+          setFileName(handle.name);
+          if(content) {
+            setInitialContent(content);
+          }
         }
       };
     };
@@ -94,6 +104,7 @@ export function useFileSave(
 
   const writeFile = async (content: string) => {
     if (!filehandle.current) return;
+    localStorage.setItem("content", content);
     const writable = await filehandle.current.createWritable();
     await writable.write(content);
     await writable.close();
@@ -101,6 +112,7 @@ export function useFileSave(
 
   const getPerimisson = async () => {
     await filehandle.current?.requestPermission({});
+    setIsPermitted(true);
   };
   return {
     fileName,
