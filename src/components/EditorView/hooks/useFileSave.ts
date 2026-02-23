@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch } from "react";
+import { openDB } from "../utils/indexeddb";
 
 export function useFileSave(
   setInitialContent: Dispatch<React.SetStateAction<string>>,
@@ -38,12 +39,8 @@ export function useFileSave(
   };
 
   useEffect(() => {
-    const request = indexedDB.open("fileHandles", 1);
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore("handles", {
-        keyPath: "id",
-      });
-    };
+    const request = openDB();
+    
     //从indexedDB里读取filehandle
     request.onsuccess = () => {
       dbRef.current = request.result;
