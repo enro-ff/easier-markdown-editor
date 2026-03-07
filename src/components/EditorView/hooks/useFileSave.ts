@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch } from "react";
-import { openDB } from "../utils/indexeddb";
+import { openDB } from "../utils/indexedDB";
 
 export function useFileSave(
   setInitialContent: Dispatch<React.SetStateAction<string>>,
