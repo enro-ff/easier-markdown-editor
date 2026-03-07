@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch } from "react";
-import { openDB } from "../utils/indexedDB";
 
 export function useFileSave(
   setInitialContent: Dispatch<React.SetStateAction<string>>,
+  DBPromise: Promise<IDBDatabase>
 ) {
   const [isPermitted, setIsPermitted] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("untitled.md");
@@ -39,30 +39,30 @@ export function useFileSave(
   };
 
   useEffect(() => {
-    const request = openDB();
-    
-    //从indexedDB里读取filehandle
-    request.onsuccess = () => {
-      dbRef.current = request.result;
-      const objStoreRequest = request.result
-        .transaction("handles")
-        .objectStore("handles")
-        .get("111");
+    const initDB = async () => {
+      const db = await DBPromise;
+      dbRef.current = db;
+
+      //从indexedDB里读取filehandle
+      const transaction = db.transaction("handles", "readonly");
+      const objStoreRequest = transaction.objectStore("handles").get("111");
+
       objStoreRequest.onsuccess = () => {
-        console.log(objStoreRequest.result);
         if (objStoreRequest.result && objStoreRequest.result.handle) {
           const handle = objStoreRequest.result.handle;
           filehandle.current = handle;
           checkPermission(handle);
-          const content = localStorage.getItem("content")
+          const content = localStorage.getItem("content");
           setFileName(handle.name);
-          if(content) {
+          if (content) {
             setInitialContent(content);
           }
         }
       };
     };
-  }, []);
+
+    initDB();
+  }, [DBPromise, setInitialContent]);
 
   const newFile = () => {
     storeFileHandleChange(null);

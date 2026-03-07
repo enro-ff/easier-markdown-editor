@@ -22,6 +22,7 @@ import {
 import { PreviewThemeExtension } from "./extentions/mdWYSIWYG/index";
 import { defaultKeymap, historyKeymap } from "@codemirror/commands";
 import FileDropDown from "./Component/FileDropdown/FileDropdown";
+import useIndexedDB from "./hooks/useIndexedDB";
 
 type ViewMode = "code" | "split" | "preview";
 
@@ -62,6 +63,7 @@ export default function MDEditor() {
   );
   const contentRef = useRef<string>(initialContent);
   const fileDropDownRef = useRef<{updateIsSaved: () => void}>(null);
+  const DBPromise = useIndexedDB();
 
   const syncAnnotation = Annotation.define<boolean>();
   function syncDispatch(main: EditorView, other: EditorView, tr: Transaction) {
@@ -163,6 +165,7 @@ export default function MDEditor() {
           ref={fileDropDownRef}
           contentRef={contentRef}
           setInitialContent={setInitialContent}
+          DBPromise = {DBPromise}
         />
         <Radio.Group
           value={viewMode}

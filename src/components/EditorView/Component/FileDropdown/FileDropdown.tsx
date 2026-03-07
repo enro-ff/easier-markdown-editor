@@ -13,11 +13,13 @@ interface FileDropDownProps {
   ref: React.Ref<{ updateIsSaved: () => void }>;
   contentRef: RefObject<string>;
   setInitialContent: Dispatch<React.SetStateAction<string>>;
+  DBPromise: Promise<IDBDatabase>
 }
 const FileDropDown: React.FC<FileDropDownProps> = ({
   ref,
   contentRef,
   setInitialContent,
+  DBPromise
 }) => {
   const {
     menuItems,
@@ -28,7 +30,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
     isPermitted,
     getPerimisson,
     supportSystemFileAccess,
-  } = useMenuItem(setInitialContent, contentRef);
+  } = useMenuItem(setInitialContent, contentRef,DBPromise);
 
   useImperativeHandle(ref, () => {
     return {

@@ -3,7 +3,8 @@ import { useFileSave } from "../../../hooks/useFileSave";
 
 export function useMenuItem(
   setInitialContent: Dispatch<React.SetStateAction<string>>,
-  contentRef: RefObject<string>
+  contentRef: RefObject<string>,
+  DBPromise : Promise<IDBDatabase>
 ) {
   const {
     fileName,
@@ -14,7 +15,7 @@ export function useMenuItem(
     saveFileAs,
     isPermitted,
     getPerimisson,
-  } = useFileSave(setInitialContent);
+  } = useFileSave(setInitialContent, DBPromise);
 
   const [isSaved, setIsSaved] = useState<boolean>(true);
   const supportSystemFileAccess = "showOpenFilePicker" in window;
