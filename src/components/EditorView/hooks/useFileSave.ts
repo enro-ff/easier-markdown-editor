@@ -1,14 +1,36 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { Dispatch } from "react";
 
 export function useFileSave(
   setInitialContent: Dispatch<React.SetStateAction<string>>,
-  DBPromise: Promise<IDBDatabase>
+  DBPromise: Promise<IDBDatabase>,
 ) {
   const [isPermitted, setIsPermitted] = useState<boolean>(false);
   const [fileName, setFileName] = useState<string>("untitled.md");
   const filehandle = useRef<FileSystemFileHandle | null>(null);
-  const dbRef = useRef<IDBDatabase | null>(null);
+
+  const initDB = async () => {
+    const db = await DBPromise;
+
+    //从indexedDB里读取filehandle
+    const transaction = db.transaction("handles", "readonly");
+    const objStoreRequest = transaction.objectStore("handles").get("111");
+
+    objStoreRequest.onsuccess = () => {
+      if (objStoreRequest.result && objStoreRequest.result.handle) {
+        const handle = objStoreRequest.result.handle;
+        filehandle.current = handle;
+        checkPermission(handle);
+        const content = localStorage.getItem("content");
+        setFileName(handle.name);
+        if (content) {
+          setInitialContent(content);
+        }
+      }
+    };
+  };
+
+  initDB();
 
   const readFileHandle = async (handle: FileSystemFileHandle) => {
     //从filehandle里读取文件内容
@@ -16,7 +38,7 @@ export function useFileSave(
     setFileName(handle.name);
     setInitialContent(contents);
     const localContent = localStorage.getItem("content");
-    if(localContent !== contents) {
+    if (localContent !== contents) {
       localStorage.setItem("content", contents);
     }
   };
@@ -28,44 +50,20 @@ export function useFileSave(
     console.log(isPermitted);
   };
 
-  const storeFileHandleChange = (handle: FileSystemFileHandle | null) => {
+  const storeFileHandleChange = async (handle: FileSystemFileHandle | null) => {
     //把filehandle的变更存储到indexedDB里
     filehandle.current = handle;
-    dbRef.current
-      ?.transaction("handles", "readwrite")
+    const db = await DBPromise;
+    db.transaction("handles", "readwrite")
       .objectStore("handles")
       .put({ id: "111", handle: handle });
     if (handle) setFileName(handle.name);
   };
 
-  useEffect(() => {
-    const initDB = async () => {
-      const db = await DBPromise;
-      dbRef.current = db;
+  
 
-      //从indexedDB里读取filehandle
-      const transaction = db.transaction("handles", "readonly");
-      const objStoreRequest = transaction.objectStore("handles").get("111");
-
-      objStoreRequest.onsuccess = () => {
-        if (objStoreRequest.result && objStoreRequest.result.handle) {
-          const handle = objStoreRequest.result.handle;
-          filehandle.current = handle;
-          checkPermission(handle);
-          const content = localStorage.getItem("content");
-          setFileName(handle.name);
-          if (content) {
-            setInitialContent(content);
-          }
-        }
-      };
-    };
-
-    initDB();
-  }, [DBPromise, setInitialContent]);
-
-  const newFile = () => {
-    storeFileHandleChange(null);
+  const newFile = async () => {
+    await storeFileHandleChange(null);
     setFileName("");
     setInitialContent("");
     setIsPermitted(false);
@@ -74,7 +72,7 @@ export function useFileSave(
   const openFile = async () => {
     const [fileHandle] = await window.showOpenFilePicker();
     checkPermission(fileHandle);
-    storeFileHandleChange(fileHandle);
+    await storeFileHandleChange(fileHandle);
     readFileHandle(fileHandle);
   };
 
@@ -89,7 +87,7 @@ export function useFileSave(
     };
 
     const handle = await window.showSaveFilePicker(options);
-    storeFileHandleChange(handle);
+    await storeFileHandleChange(handle);
     readFileHandle(handle);
     writeFile(content);
     setIsPermitted(true);

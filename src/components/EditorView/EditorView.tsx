@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Radio, Splitter } from "antd";
 import "./EditorView.css";
 import { useEditorSyncScroll } from "./hooks/useEditorSyncScroll";
@@ -63,7 +63,7 @@ export default function MDEditor() {
   );
   const contentRef = useRef<string>(initialContent);
   const fileDropDownRef = useRef<{updateIsSaved: () => void}>(null);
-  const DBPromise = useIndexedDB();
+  const DBPromise = useMemo(() => useIndexedDB(), []);
 
   const syncAnnotation = Annotation.define<boolean>();
   function syncDispatch(main: EditorView, other: EditorView, tr: Transaction) {

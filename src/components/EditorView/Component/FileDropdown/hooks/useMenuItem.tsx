@@ -29,7 +29,7 @@ export function useMenuItem(
             label: (
               <a
                 onClick={async () => {
-                  newFile();
+                  await newFile();
                   setIsSaved(true);
                 }}
               >
