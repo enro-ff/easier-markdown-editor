@@ -160,6 +160,9 @@ const UploadImageItem: React.FC<UploadImageItemProps> = ({
           showSizeChanger
           onChange={(p, size) => refresh(p, size)}
         />
+        <Button  onClick={() =>{ store.deleteAllImage();refresh(1)}}>
+          删除所有图片
+        </Button>
       </Modal>
     </>
   );

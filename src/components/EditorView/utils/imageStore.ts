@@ -32,6 +32,7 @@ async function hashBlob(blob: Blob): Promise<string> {
     const digest = await crypto.subtle.digest("SHA-256", buf);
     return toHex(digest);
   } catch (error) {
+    console.log(error)
     const text = await blob.text();
     let hash = 0;
     for (let i = 0; i < text.length; i++) {
@@ -222,6 +223,18 @@ export class ImageStore {
     };
     await waitForTransaction(tx);
     this.revokeObjectURL(id);
+  }
+
+  async deleteAllImage() {
+    const db = await this.db();
+    const tx = db.transaction([DB_IMAGE_META, DB_IMAGE_CHUNK], "readwrite");
+    tx.objectStore(DB_IMAGE_CHUNK).clear();
+    tx.objectStore(DB_IMAGE_META).clear();
+    for(const e of this.urlCache){
+      const id = e[0];
+      await this.revokeObjectURL(id);
+    }
+    this.urlCache.clear();
   }
 
   async bulkImport(files: FileList | File[]): Promise<StoredImageMeta[]> {
