@@ -23,6 +23,7 @@ import { PreviewThemeExtension } from "./extentions/mdWYSIWYG/index";
 import { defaultKeymap, historyKeymap } from "@codemirror/commands";
 import FileDropDown from "./Component/FileDropdown/FileDropdown";
 import useIndexedDB from "./hooks/useIndexedDB";
+import UploadImageItem from "./Component/UploadImageItem/UploadImageItem";
 
 type ViewMode = "code" | "split" | "preview";
 
@@ -166,6 +167,12 @@ export default function MDEditor() {
           contentRef={contentRef}
           setInitialContent={setInitialContent}
           DBPromise = {DBPromise}
+        />
+        <UploadImageItem
+          codeEditorViewRef={codeEditorViewRef}
+          codeContainerRef={codeContainerRef}
+          previewContainerRef={previewContainerRef}
+          dbPromise={DBPromise}
         />
         <Radio.Group
           value={viewMode}

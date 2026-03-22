@@ -1,4 +1,9 @@
 import { Decoration, EditorView, WidgetType } from "@codemirror/view";
+import useIndexedDB from "../../hooks/useIndexedDB";
+import { createImageStore } from "../../utils/imageStore";
+
+const sharedStore = createImageStore(useIndexedDB());
+const DB_PROTOCOL = "db://";
 
 class nonWigdget extends WidgetType {
   constructor() {
@@ -29,7 +34,19 @@ class imageWidget extends WidgetType {
 
   toDOM() {
     const img = document.createElement("img");
-    img.src = this.src;
+    if (this.src.startsWith(DB_PROTOCOL)) {
+      img.dataset.key = this.src;
+      sharedStore
+        .getObjectURL(this.src.replace(DB_PROTOCOL, ""))
+        .then((url) => {
+          img.src = url;
+        })
+        .catch(() => {
+          img.alt = "Image missing";
+        });
+    } else {
+      img.src = this.src;
+    }
     img.alt = this.alt;
     img.title = this.title;
     img.style.maxWidth = "100%";
@@ -46,6 +63,13 @@ class imageWidget extends WidgetType {
 
   ignoreEvent() {
     return true;
+  }
+
+  destroy(dom: HTMLElement) {
+    if (this.src.startsWith(DB_PROTOCOL)) {
+      sharedStore.revokeObjectURL(this.src.replace(DB_PROTOCOL, ""));
+    }
+    super.destroy(dom);
   }
 }
 
