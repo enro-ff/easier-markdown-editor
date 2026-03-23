@@ -2,8 +2,8 @@
 import { Button, Card, Modal, Popconfirm, Space, Spin, Tooltip, Pagination, Typography } from "antd";
 import { DeleteOutlined, PictureOutlined, UploadOutlined } from "@ant-design/icons";
 import type { EditorView } from "@codemirror/view";
-import { useImageAssets } from "../../hooks/useImageAssets";
-import type { StoredImageMeta } from "../../utils/imageStore";
+import { useImageAssets } from "../../../../hooks/useImageAssets";
+import type { StoredImageMeta } from "../../../../utils/imageStore";
 import "./UploadImageItem.css";
 
 const { Text } = Typography;

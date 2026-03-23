@@ -4,22 +4,30 @@ import React, {
   type Dispatch,
   type RefObject,
 } from "react";
+import type { EditorView } from "@codemirror/view";
 import { DownOutlined } from "@ant-design/icons";
 import { Dropdown, Space } from "antd";
 import { useMenuItem } from "./hooks/useMenuItem";
+import  UploadImageItem from "./Component/UploadImageItem/UploadImageItem"
 import "./FileDropdown.css";
 
 interface FileDropDownProps {
   ref: React.Ref<{ updateIsSaved: () => void }>;
   contentRef: RefObject<string>;
   setInitialContent: Dispatch<React.SetStateAction<string>>;
-  DBPromise: Promise<IDBDatabase>
+  DBPromise: Promise<IDBDatabase>;
+  codeEditorViewRef: React.MutableRefObject<EditorView | null>;
+  codeContainerRef: React.MutableRefObject<HTMLElement | undefined>;
+  previewContainerRef: React.MutableRefObject<HTMLElement | undefined>;
 }
 const FileDropDown: React.FC<FileDropDownProps> = ({
   ref,
   contentRef,
   setInitialContent,
-  DBPromise
+  DBPromise,
+  codeEditorViewRef,
+  codeContainerRef,
+  previewContainerRef
 }) => {
   const {
     menuItems,
@@ -30,7 +38,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
     isPermitted,
     getPerimisson,
     supportSystemFileAccess,
-  } = useMenuItem(setInitialContent, contentRef,DBPromise);
+  } = useMenuItem(setInitialContent, contentRef, DBPromise);
 
   useImperativeHandle(ref, () => {
     return {
@@ -70,6 +78,12 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
           </Space>
         </a>
       </Dropdown>
+      <UploadImageItem
+        codeEditorViewRef={codeEditorViewRef}
+        codeContainerRef={codeContainerRef}
+        previewContainerRef={previewContainerRef}
+        dbPromise={DBPromise}
+      />
       <p className="filename">
         {fileName}
         {isSaved ? "" : "*(unsaved)"}
