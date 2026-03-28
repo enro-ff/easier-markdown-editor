@@ -28,13 +28,16 @@ export const focusListener = EditorView.updateListener.of((update) => {
   }
 });
 
-export const hasFocus = (state: EditorState) => state.field(focusState);
+export const hasFocus = (state: EditorState) => 
+  {
+    console.log(state)
+    return state.field(focusState, false);}
 
 export const isFocusEvent = (tr: Transaction) =>
   tr.isUserEvent("cm-focus") || tr.isUserEvent("cm-blur");
 
 export const isFocusEventState = (prev: EditorState, next: EditorState) =>
-  prev.field(focusState) !== next.field(focusState);
+  prev.field(focusState, false) !== next.field(focusState,false);
 
 // From state/forceUpdate.ts
 export const forceUpdateEffect = StateEffect.define<void>();
@@ -100,8 +103,8 @@ export const isSelectRange = (state: EditorState, range: BaseRange) => {
 export function findNodeURL(
   state: EditorState,
   node: SyntaxNodeRef,
-): string | undefined {
-  let url: string | undefined;
+): string  {
+  let url: string = "";
   if (node.name === "URL") {
     url = state.doc.sliceString(node.from, node.to);
   } else {

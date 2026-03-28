@@ -5,10 +5,7 @@ import { useEditorSyncScroll } from "./hooks/useEditorSyncScroll";
 import { history } from "@codemirror/commands";
 import {
   Annotation,
-  ChangeSet,
   EditorState,
-  type ChangeSpec,
-  type TransactionSpec,
 } from "@codemirror/state";
 import { Transaction, type Extension } from "@codemirror/state";
 import { EditorView, keymap, ViewPlugin } from "@codemirror/view";
@@ -16,10 +13,9 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
   defaultHighlightStyle,
-  syntaxHighlighting,
-  syntaxTree,
+  syntaxHighlighting
 } from "@codemirror/language";
-import { purrmd, purrmdTheme } from 'purrmd';
+import { purrmd, purrmdTheme, type PurrMDFeatures } from 'purrmd';
 import {image} from './extentions/image.ts'
 import { defaultKeymap, historyKeymap } from "@codemirror/commands";
 import FileDropDown from "./Component/FileDropdown/FileDropdown";
@@ -27,32 +23,6 @@ import useIndexedDB from "./hooks/useIndexedDB";
 
 type ViewMode = "code" | "split" | "preview";
 
-// const deleteFilter = EditorState.transactionFilter.of((tr) => {
-//   const changes: ChangeSpec[] = []
-//   console.log(tr.annotation(Transaction.addToHistory))
-//   if(!tr.changes.empty && !tr.annotation(syncAnnotation)){
-//     tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-//       console.log(fromA,toA,fromB,toB,inserted)
-//       console.log(tr.startState)
-//       if(fromA === fromB ) {
-//         syntaxTree(tr.startState).iterate({
-//           from: fromA,
-//           to: toA,
-//           enter: (node) => {
-//             console.log(node.to,node.name)
-//             if(node.name === "StrikethroughMark" && node.to === toA && fromA+1 === toA){
-//               tr.isUserEvent("redo")
-//               const newFrom = node.from - 2
-//               changes.push({from:newFrom, to:node.from, insert:inserted})
-//               console.log(changes)
-//             }
-//           }
-//         })
-//       }
-//     })
-//   }
-//   return changes.length?[ {changes ,annotations:tr.annotation   }]: tr;
-// })
 export default function MDEditor() {
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const previewEditorViewRef = useRef<EditorView | null>(null);
@@ -134,7 +104,7 @@ export default function MDEditor() {
     });
 
     const previewEditorView = new EditorView({
-      state: CreateEditorState(initialContent, [purrmd({features: {Image: image}}), purrmdTheme()]),
+      state: CreateEditorState(initialContent, [purrmd({ features :{"Image":  false }}), purrmdTheme(), image("auto")]),
       parent: previewContainerRef.current,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {

@@ -11,6 +11,8 @@ import {
 
 import type { FormattingDisplayMode } from 'purrmd';
 import { findNodeURL, isSelectRange, selectRange, isFocusEventState, isForceUpdateEventState } from './utils';
+import useIndexedDB from "../hooks/useIndexedDB";
+import { createImageStore } from "../utils/imageStore";
 
 export const imageClass = {
   image: 'purrmd-cm-image',
@@ -19,6 +21,62 @@ export const imageClass = {
   imageDom: 'purrmd-cm-image-dom',
   imageFallback: 'purrmd-cm-image-fallback',
 };
+
+const sharedStore = createImageStore(useIndexedDB());
+const DB_PROTOCOL = "db://";
+
+class imageWidget extends WidgetType {
+  private src: string = "";
+  private alt: string = "";
+  private title: string = "";
+  constructor(src: string, alt?: string, title?: string) {
+    super();
+    this.src = src;
+    this.alt = alt || "";
+    this.title = title || "";
+  }
+
+  toDOM() {
+    const img = document.createElement("img");
+    if (this.src.startsWith(DB_PROTOCOL)) {
+      img.dataset.key = this.src;
+      sharedStore
+        .getObjectURL(this.src.replace(DB_PROTOCOL, ""))
+        .then((url) => {
+          img.src = url;
+        })
+        .catch(() => {
+          img.alt = "Image missing";
+        });
+    } else {
+      img.src = this.src;
+    }
+    img.alt = this.alt;
+    img.title = this.title;
+    img.style.maxWidth = "100%";
+    return img;
+  }
+
+  eq(other: imageWidget) {
+    return (
+      this.src === other.src &&
+      this.alt === other.alt &&
+      this.title === other.title
+    );
+  }
+
+  ignoreEvent() {
+    return true;
+  }
+
+  destroy(dom: HTMLElement) {
+    if (this.src.startsWith(DB_PROTOCOL)) {
+      sharedStore.revokeObjectURL(this.src.replace(DB_PROTOCOL, ""));
+    }
+    super.destroy(dom);
+  }
+}
+
 
 
 class Image extends WidgetType {
@@ -115,6 +173,7 @@ function imageDecorations(
   const decorations: Range<Decoration>[] = [];
   syntaxTree(state).iterate({
     enter(node) {
+      console.log("进入自定义image")
       if (mode === 'show') return;
       if (node.type.name === 'Image') {
         const isSelect = isSelectRange(state, node);
@@ -130,17 +189,8 @@ function imageDecorations(
         if (config?.proxyURL) {
           url = config.proxyURL(rawUrl || '');
         }
-        const image = new Image(
-          failedImageUrls,
+        const image = new imageWidget(
           url,
-          null,
-          isImageLink,
-          (e) => {
-            selectRange(view, { from, to });
-            config?.onImageDown?.(e, url, rawUrl);
-          },
-          config?.NoImageAvailableLabel,
-          config?.ImageLoadFailedLabel,
         );
         if (isSelect) {
           const decoration = Decoration.widget({
