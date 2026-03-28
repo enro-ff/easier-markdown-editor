@@ -19,11 +19,11 @@ import {
   syntaxHighlighting,
   syntaxTree,
 } from "@codemirror/language";
-import { PreviewThemeExtension } from "./extentions/mdWYSIWYG/index";
+import { purrmd, purrmdTheme } from 'purrmd';
+import {image} from './extentions/image.ts'
 import { defaultKeymap, historyKeymap } from "@codemirror/commands";
 import FileDropDown from "./Component/FileDropdown/FileDropdown";
 import useIndexedDB from "./hooks/useIndexedDB";
-import UploadImageItem from "./Component/FileDropdown/Component/UploadImageItem/UploadImageItem";
 
 type ViewMode = "code" | "split" | "preview";
 
@@ -134,7 +134,7 @@ export default function MDEditor() {
     });
 
     const previewEditorView = new EditorView({
-      state: CreateEditorState(initialContent, [PreviewThemeExtension()]),
+      state: CreateEditorState(initialContent, [purrmd({features: {Image: image}}), purrmdTheme()]),
       parent: previewContainerRef.current,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
