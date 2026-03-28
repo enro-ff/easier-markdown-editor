@@ -15,7 +15,7 @@ import {
   defaultHighlightStyle,
   syntaxHighlighting
 } from "@codemirror/language";
-import { purrmd, purrmdTheme, type PurrMDFeatures } from 'purrmd';
+import { purrmd, purrmdTheme } from 'purrmd';
 import {image} from './extentions/image.ts'
 import { defaultKeymap, historyKeymap } from "@codemirror/commands";
 import FileDropDown from "./Component/FileDropdown/FileDropdown";
@@ -27,8 +27,8 @@ export default function MDEditor() {
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const previewEditorViewRef = useRef<EditorView | null>(null);
   const codeEditorViewRef = useRef<EditorView | null>(null);
-  const codeContainerRef = useRef<HTMLElement>(undefined);
-  const previewContainerRef = useRef<HTMLElement>(undefined);
+  const codeContainerRef = useRef<HTMLDivElement | null>(null);
+  const previewContainerRef = useRef<HTMLDivElement | null>(null);
   const [initialContent, setInitialContent] = useState<string>(
     `<img src="url" alt="foo" />`,
   );
@@ -86,12 +86,13 @@ export default function MDEditor() {
     });
   };
 
-  const codekeymap = keymap.of([defaultKeymap, historyKeymap]);
+  const codekeymap = keymap.of([...defaultKeymap, ...historyKeymap]);
 
   useEffect(() => {
+    if (!codeContainerRef.current || !previewContainerRef.current) return;
     const codeEditorView = new EditorView({
       state: CreateEditorState(initialContent, [history(), codekeymap]),
-      parent: codeContainerRef.current,
+      parent: codeContainerRef.current!,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
           syncDispatch(
@@ -105,7 +106,7 @@ export default function MDEditor() {
 
     const previewEditorView = new EditorView({
       state: CreateEditorState(initialContent, [purrmd({ features :{"Image":  false }}), purrmdTheme(), image("auto")]),
-      parent: previewContainerRef.current,
+      parent: previewContainerRef.current!,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
           syncDispatch(

@@ -29,9 +29,7 @@ export const focusListener = EditorView.updateListener.of((update) => {
 });
 
 export const hasFocus = (state: EditorState) => 
-  {
-    console.log(state)
-    return state.field(focusState, false);}
+  state.field(focusState, false);
 
 export const isFocusEvent = (tr: Transaction) =>
   tr.isUserEvent("cm-focus") || tr.isUserEvent("cm-blur");
@@ -67,7 +65,7 @@ export const debouncedScrollListener = (delay = 150) => {
   return [
     scrollState,
     EditorView.domEventHandlers({
-      scroll: (event, view) => {
+      scroll: (_event, view) => {
         if (scrollTimeout !== null) {
           clearTimeout(scrollTimeout);
         }

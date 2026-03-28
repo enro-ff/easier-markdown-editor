@@ -17,8 +17,8 @@ interface FileDropDownProps {
   setInitialContent: Dispatch<React.SetStateAction<string>>;
   DBPromise: Promise<IDBDatabase>;
   codeEditorViewRef: React.MutableRefObject<EditorView | null>;
-  codeContainerRef: React.MutableRefObject<HTMLElement | undefined>;
-  previewContainerRef: React.MutableRefObject<HTMLElement | undefined>;
+  codeContainerRef: React.MutableRefObject<HTMLDivElement | null>;
+  previewContainerRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 const FileDropDown: React.FC<FileDropDownProps> = ({
   ref,

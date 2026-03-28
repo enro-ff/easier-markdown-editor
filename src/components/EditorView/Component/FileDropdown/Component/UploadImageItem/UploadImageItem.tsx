@@ -10,8 +10,8 @@ const { Text } = Typography;
 
 interface UploadImageItemProps {
   codeEditorViewRef: React.MutableRefObject<EditorView | null>;
-  codeContainerRef: React.MutableRefObject<HTMLElement | undefined>;
-  previewContainerRef: React.MutableRefObject<HTMLElement | undefined>;
+  codeContainerRef: React.MutableRefObject<HTMLDivElement | null>;
+  previewContainerRef: React.MutableRefObject<HTMLDivElement | null>;
   dbPromise: Promise<IDBDatabase>;
 }
 

@@ -1,5 +1,5 @@
-import { syntaxTree } from '@codemirror/language';
-import type{ Extension, Range } from '@codemirror/state';
+﻿import { syntaxTree } from "@codemirror/language";
+import type { Extension, Range } from "@codemirror/state";
 import {
   Decoration,
   type DecorationSet,
@@ -7,28 +7,24 @@ import {
   ViewPlugin,
   ViewUpdate,
   WidgetType,
-} from '@codemirror/view';
+} from "@codemirror/view";
 
-import type { FormattingDisplayMode } from 'purrmd';
-import { findNodeURL, isSelectRange, selectRange, isFocusEventState, isForceUpdateEventState } from './utils';
+import type { FormattingDisplayMode } from "purrmd";
+import { findNodeURL, isSelectRange, isFocusEventState, isForceUpdateEventState } from "./utils";
 import useIndexedDB from "../hooks/useIndexedDB";
 import { createImageStore } from "../utils/imageStore";
 
 export const imageClass = {
-  image: 'purrmd-cm-image',
-  imageLinkWrap: 'purrmd-cm-image-link-wrap',
-  imageWrap: 'purrmd-cm-image-wrap',
-  imageDom: 'purrmd-cm-image-dom',
-  imageFallback: 'purrmd-cm-image-fallback',
+  image: "purrmd-cm-image",
 };
 
 const sharedStore = createImageStore(useIndexedDB());
 const DB_PROTOCOL = "db://";
 
-class imageWidget extends WidgetType {
-  private src: string = "";
-  private alt: string = "";
-  private title: string = "";
+class ImageWidget extends WidgetType {
+  private src: string;
+  private alt: string;
+  private title: string;
   constructor(src: string, alt?: string, title?: string) {
     super();
     this.src = src;
@@ -39,7 +35,6 @@ class imageWidget extends WidgetType {
   toDOM() {
     const img = document.createElement("img");
     if (this.src.startsWith(DB_PROTOCOL)) {
-      img.dataset.key = this.src;
       sharedStore
         .getObjectURL(this.src.replace(DB_PROTOCOL, ""))
         .then((url) => {
@@ -53,16 +48,13 @@ class imageWidget extends WidgetType {
     }
     img.alt = this.alt;
     img.title = this.title;
+    img.className = imageClass.image;
     img.style.maxWidth = "100%";
     return img;
   }
 
-  eq(other: imageWidget) {
-    return (
-      this.src === other.src &&
-      this.alt === other.alt &&
-      this.title === other.title
-    );
+  eq(other: ImageWidget) {
+    return this.src === other.src && this.alt === other.alt && this.title === other.title;
   }
 
   ignoreEvent() {
@@ -77,133 +69,31 @@ class imageWidget extends WidgetType {
   }
 }
 
-
-
-class Image extends WidgetType {
-  failedImageUrls: Set<string>;
-  url: string | null | undefined;
-  alt: string | null | undefined;
-  isImageLink: boolean;
-  onImageDown: ((e: MouseEvent) => void) | null;
-  noImageAvailableLabel?: string;
-  imageLoadFailedLabel?: (url: string) => string;
-
-  constructor(
-    failedImageUrls: Set<string>,
-    url: string | null | undefined,
-    alt: string | null | undefined,
-    isImageLink: boolean,
-    onImageDown: ((e: MouseEvent) => void) | null,
-    noImageAvailableLabel?: string,
-    imageLoadFailedLabel?: (url: string) => string,
-  ) {
-    super();
-    this.failedImageUrls = failedImageUrls;
-    this.url = url;
-    this.alt = alt;
-    this.isImageLink = isImageLink;
-    this.onImageDown = onImageDown;
-    this.noImageAvailableLabel = noImageAvailableLabel;
-    this.imageLoadFailedLabel = imageLoadFailedLabel;
-  }
-
-  toDOM() {
-    const el = document.createElement('span');
-    el.className = this.isImageLink ? imageClass.imageLinkWrap : imageClass.imageWrap;
-    if (this.url) {
-      const url = this.url;
-      const hasFailed = this.failedImageUrls.has(url);
-
-      const appendError = () => {
-        const fallbackText = document.createElement('span');
-        fallbackText.className = imageClass.imageFallback;
-        fallbackText.textContent =
-          this.imageLoadFailedLabel?.(url) || `Image failed to load: ${url}`;
-
-        el.appendChild(fallbackText);
-      };
-
-      if (hasFailed) {
-        appendError();
-      } else {
-        const img = document.createElement('img');
-        img.className = imageClass.imageDom;
-        img.src = url;
-
-        if (this.alt) {
-          img.alt = this.alt;
-        }
-
-        img.onerror = () => {
-          this.failedImageUrls.add(url);
-          img.style.display = 'none';
-          appendError();
-        };
-
-        el.appendChild(img);
-      }
-    } else {
-      const fallbackText = document.createElement('span');
-      fallbackText.className = imageClass.imageFallback;
-      fallbackText.textContent = this.noImageAvailableLabel || 'No image available';
-      el.appendChild(fallbackText);
-    }
-
-    el.onmousedown = this.onImageDown;
-
-    return el;
-  }
-
-  ignoreEvent() {
-    return false;
-  }
-
-  eq(other: Image) {
-    return this.url === other.url && this.alt === other.alt;
-  }
-}
-
 function imageDecorations(
   mode: FormattingDisplayMode,
   config: ImageConfig | undefined,
   view: EditorView,
-  failedImageUrls: Set<string>,
 ): DecorationSet {
   const state = view.state;
   const decorations: Range<Decoration>[] = [];
   syntaxTree(state).iterate({
     enter(node) {
-      console.log("进入自定义image")
-      if (mode === 'show') return;
-      if (node.type.name === 'Image') {
+      if (mode === "show") return;
+      if (node.type.name === "Image") {
         const isSelect = isSelectRange(state, node);
-        if (!config?.imageAlwaysShow && isSelect) {
-          return;
-        }
-        const parent = node.node.parent;
-        const isImageLink = parent != null && parent.type.name === 'Link';
+        if (!config?.imageAlwaysShow && isSelect) return;
         const rawUrl = findNodeURL(state, node);
-        const from = node.from;
-        const to = node.to;
         let url = rawUrl;
-        if (config?.proxyURL) {
-          url = config.proxyURL(rawUrl || '');
-        }
-        const image = new imageWidget(
-          url,
-        );
+        if (config?.proxyURL) url = config.proxyURL(rawUrl || "");
+        const widget = new ImageWidget(url ?? "", undefined, undefined);
         if (isSelect) {
-          const decoration = Decoration.widget({
-            widget: image,
-            side: 1,
-          }).range(node.to);
-          decorations.push(decoration);
+          decorations.push(
+            Decoration.widget({ widget, side: 1 }).range(node.to),
+          );
         } else {
-          const decoration = Decoration.replace({
-            widget: image,
-            side: -1,
-          }).range(node.from, node.to);
-          decorations.push(decoration);
+          decorations.push(
+            Decoration.replace({ widget, side: -1 }).range(node.from, node.to),
+          );
         }
       }
     },
@@ -216,11 +106,10 @@ export function image(mode: FormattingDisplayMode, config?: ImageConfig): Extens
   config.imageAlwaysShow ??= true;
   const imagePlugin: Extension = ViewPlugin.fromClass(
     class {
-      private readonly failedImageUrls = new Set<string>();
       private updateCount = 0;
       decorations: DecorationSet;
       constructor(view: EditorView) {
-        this.decorations = imageDecorations(mode, config, view, this.failedImageUrls);
+        this.decorations = imageDecorations(mode, config, view);
       }
       update(update: ViewUpdate) {
         if (
@@ -230,12 +119,10 @@ export function image(mode: FormattingDisplayMode, config?: ImageConfig): Extens
           isFocusEventState(update.startState, update.state) ||
           isForceUpdateEventState(update.startState, update.state)
         ) {
-          this.decorations = imageDecorations(mode, config, update.view, this.failedImageUrls);
+          this.decorations = imageDecorations(mode, config, update.view);
           this.updateCount++;
           if (this.updateCount > 1000) {
-            // 每 1000 次更新清理一次失败的图片 URL
             this.updateCount = 0;
-            this.failedImageUrls.clear();
           }
         }
       }
@@ -246,15 +133,10 @@ export function image(mode: FormattingDisplayMode, config?: ImageConfig): Extens
 }
 
 export interface ImageConfig {
-  /** Proxy URL, if provided, will be used to transform the URL */
   proxyURL?: (url: string) => string;
-  /** image alway show, @default true */
   imageAlwaysShow?: boolean;
-  /** Label when no image available, @default 'No image available' */
   NoImageAvailableLabel?: string;
-  /** Label when image load failed, @default (url) => `Image failed to load: ${url}` */
   ImageLoadFailedLabel?: (url: string) => string;
-  /** on image down */
   onImageDown?: (
     e: MouseEvent,
     url: string | null | undefined,
