@@ -1,4 +1,5 @@
 import type { StoredImageMeta } from "../utils/imageStore";
+import type { StoredFolderMeta } from "../utils/folderStore";
 
 // 数据库配置
 const DB_NAME = "fileHandles";
@@ -54,7 +55,7 @@ const ensureStores = (db: IDBDatabase) => {
       type: "folder",
       parentId: 0,
       url: "./",
-    } as StoredImageMeta);
+    } as StoredFolderMeta);
     
     // 初始化上级文件夹
     store.add({
@@ -63,7 +64,7 @@ const ensureStores = (db: IDBDatabase) => {
       type: "folder",
       parentId: 0,
       url: "../",
-    } as StoredImageMeta);
+    } as StoredFolderMeta);
   }
 
   // 图片分片存储
@@ -75,9 +76,29 @@ const ensureStores = (db: IDBDatabase) => {
 
   // 文件夹存储（如果需要单独的文件夹表）
   if (!db.objectStoreNames.contains(STORE_FOLDERS)) {
+    console.log("创建文件夹存储")
+    
     const folderStore = db.createObjectStore(STORE_FOLDERS, { keyPath: "id" });
     folderStore.createIndex("url", "url", { unique: true });
     folderStore.createIndex("parentId", "parentId", { unique: false });
+
+    // 初始化根文件夹
+    folderStore.add({
+      id: 1,
+      name: "root",
+      type: "folder",
+      parentId: 0,
+      url: "./",
+    } as StoredFolderMeta);
+    
+    // 初始化上级文件夹
+    folderStore.add({
+      id: 2,
+      name: "other",
+      type: "folder",
+      parentId: 0,
+      url: "../",
+    } as StoredFolderMeta);
   }
 };
 

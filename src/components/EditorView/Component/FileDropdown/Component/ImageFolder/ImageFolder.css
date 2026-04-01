@@ -1,0 +1,7 @@
+.image-folder-modal {
+    width: 90vh;
+    height: 80vh;
+}/*没有效果 */
+.selected {
+    background-color: #2ccde9;
+}

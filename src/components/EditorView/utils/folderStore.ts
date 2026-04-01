@@ -56,6 +56,15 @@ class ImagefolderStore {
 
   //获取文件夹下所有子文件夹
   private async querySubFolders(folderUrl: string) {
+    if(folderUrl === "/"){
+      // 根目录
+      const RootResult = this.db.transaction(["folders"], "readonly").objectStore("folders").index("parentId").getAll(0);
+      if(RootResult){
+        return [RootResult];
+      }else{
+        return [];
+      }
+    }
    const store = this.db.transaction(["folders"], "readonly").objectStore("folders");
    const parentId = await this.queryFolderMeta(await this.queryParentFolderUrl(folderUrl))?.id || 1;
    const result : StoredFolderMeta[] | undefined = await store.index("parentId").getAll(parentId);
@@ -66,7 +75,7 @@ export default (dbPromise: Promise<IDBDatabase>) => {
   return new ImagefolderStore(dbPromise);
 }
 
-interface StoredMetaBase {
+export interface StoredMetaBase {
   id: number;
   name: string;
   parentId: number;
@@ -74,7 +83,7 @@ interface StoredMetaBase {
   url: string;
 }
 
-interface StoredFileMeta extends StoredMetaBase {
+export interface StoredImageMeta extends StoredMetaBase {
   type: "image";
   hash?: string;
   size?: number;
@@ -82,6 +91,6 @@ interface StoredFileMeta extends StoredMetaBase {
   chunkSize?: number;
 }
 
-interface StoredFolderMeta extends StoredMetaBase {
+export interface StoredFolderMeta extends StoredMetaBase {
   type: "folder";
 }
