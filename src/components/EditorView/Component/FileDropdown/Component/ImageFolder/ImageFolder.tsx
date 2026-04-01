@@ -1,28 +1,28 @@
 import type { RefObject } from "react";
 import { useState, useRef } from "react";
 import { EditorView } from "@codemirror/view";
-import { Button, Modal, Space } from "antd";
+import { Button, Modal, Space, Tree, Input } from "antd";
 import { UploadOutlined, PictureOutlined } from "@ant-design/icons";
 import useIndexedDB from "../../../../hooks/useIndexedDB";
 import createFolderStore from "../../../../utils/folderStore";
-import type { StoredFolderMeta } from "../../../../utils/folderStore";
+import type { TreeNode } from "../../../../utils/buildDataTree";
 
 import "./ImageFolder.css";
 
 const initFolderList = [
     {
-      id: 1,
-      name: "root",
-      type: "folder",
-      parentId: 0,
-      url: "./",
+        id: 1,
+        name: "root",
+        type: "folder",
+        parentId: 0,
+        url: "./",
     },
     {
-      id: 2,
-      name: "other",
-      type: "folder",
-      parentId: 0,
-      url: "../",
+        id: 2,
+        name: "other",
+        type: "folder",
+        parentId: 0,
+        url: "../",
     }
 ]
 
@@ -37,21 +37,23 @@ interface UploadImageItemProps {
 const ImageFolder = () => {
     const folderStore = createFolderStore(useIndexedDB());
     const [folderOpen, setFolderOpen] = useState<boolean>(false);
-    const [folderSelected, setFolderSelected] = useState<string>("");
+    const [folderSelected, setFolderSelected] = useState<number>(0);
+    const [folderTree, setFolderTree] = useState<TreeNode[]>([]);
+    const [nameModalOpen, setNameModalOpen] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [nameInput, setNameInput] = useState<string>("");
 
-    const folderClicked = (folder: StoredFolderMeta) => {
-        setFolderSelected(folder.url);
+    const folderClicked = async (id: number) => {
+        setFolderSelected(id);
     }
 
-    function generateFolderList(folders: StoredFolderMeta[]) {
-        
-        return folders.map((folder) => (
-            <div key={folder.id} onClick={() => folderClicked(folder)} className={`image-folder-item ${folderSelected === folder.url ? "selected" : ""}`}>
-                {folder.name}
-            </div>
-        ));
+
+
+    const generateTreeData = async () => {
+        const TreeData = await folderStore.queryAllFolders()
+        setFolderTree(TreeData)
     }
+
     return (
         <>
             <Space size={8} className="upload-image-actions">
@@ -60,6 +62,7 @@ const ImageFolder = () => {
                 </Button> */}
                 <Button icon={<PictureOutlined />} onClick={() => {
                     setFolderOpen(true)
+                    generateTreeData()
                 }
                 }>
                     图片文件夹
@@ -71,9 +74,37 @@ const ImageFolder = () => {
                     className="image-folder-modal"
                     footer={null}
                     width="90vw"
-                ><div>
-                    {generateFolderList(initFolderList)}
-                </div>
+                ><Tree
+                        treeData={folderTree}
+                        onSelect={async (keys) => folderClicked(Number(keys[0]))}
+                    />
+                    <Button onClick={() => {
+                        setNameInput("")
+                        setNameModalOpen(true)
+                    }}>新建文件夹</Button>
+                    <Modal
+                        title="新建文件夹"
+                        open={nameModalOpen}
+                        onCancel={() => setNameModalOpen(false)}
+                        onOk={async () => {
+                            await folderStore.createFolderByParentId(folderSelected, nameInput)
+                            generateTreeData()
+                            setNameModalOpen(false)
+                        }}
+                        width="30vw"
+                    >
+                        <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
+                    </Modal>
+                    <Button onClick={async () => {
+                        await folderStore.deleteFolderById(folderSelected)
+                        generateTreeData()
+                    }}>删除文件夹</Button>
+                    <Button onClick={async () => {
+                        const currentName = String(folderTree.filter(item => item.key === folderSelected)[0].title || "")
+                        setNameInput(currentName)
+                        console.log(currentName)
+                        setNameModalOpen(true)
+                    }}>更改文件夹命名</Button>
                 </Modal>
                 {/* <input
                     ref={fileInputRef}
