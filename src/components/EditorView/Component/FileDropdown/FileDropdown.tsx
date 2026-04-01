@@ -9,6 +9,7 @@ import { DownOutlined } from "@ant-design/icons";
 import { Dropdown, Space } from "antd";
 import { useMenuItem } from "./hooks/useMenuItem";
 import  UploadImageItem from "./Component/UploadImageItem/UploadImageItem"
+import ImageFolder from "./Component/ImageFolder/ImageFolder"
 import "./FileDropdown.css";
 
 interface FileDropDownProps {
@@ -79,6 +80,12 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
         </a>
       </Dropdown>
       <UploadImageItem
+        codeEditorViewRef={codeEditorViewRef}
+        codeContainerRef={codeContainerRef}
+        previewContainerRef={previewContainerRef}
+        dbPromise={DBPromise}
+      />
+      <ImageFolder
         codeEditorViewRef={codeEditorViewRef}
         codeContainerRef={codeContainerRef}
         previewContainerRef={previewContainerRef}
