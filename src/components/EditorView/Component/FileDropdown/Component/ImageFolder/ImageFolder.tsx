@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { EditorView } from "@codemirror/view";
 import { Button, Modal, Space, Tree, Input } from "antd";
 import { UploadOutlined, PictureOutlined } from "@ant-design/icons";
@@ -47,11 +47,14 @@ const ImageFolder = () => {
         setFolderSelected(id);
     }
 
-
-
     const generateTreeData = async () => {
         const TreeData = await folderStore.queryAllFolders()
         setFolderTree(TreeData)
+    }
+
+    const openPicker = () => {
+        fileInputRef.current!.value = '';
+        fileInputRef.current!.click();
     }
 
     return (
@@ -105,15 +108,22 @@ const ImageFolder = () => {
                         console.log(currentName)
                         setNameModalOpen(true)
                     }}>更改文件夹命名</Button>
+                    <Button onClick={openPicker}>上传图片</Button>
                 </Modal>
-                {/* <input
+                <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    multiple
-                    className="upload-image-input"
+                    // multiple
+                    onChange={async(e : React.ChangeEvent<HTMLInputElement>) => {
+                        if(!e.target.files || !fileInputRef.current)return;
+                        console.log(e)
+                        await folderStore.uploadImage(e.target.files[0], folderSelected);
+                        generateTreeData();
+                    }
 
-                /> */}
+                    }
+                />
             </Space >
         </>
     );

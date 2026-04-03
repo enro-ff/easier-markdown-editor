@@ -1,5 +1,6 @@
 import type { StoredImageMeta } from "../utils/imageStore";
 import type { StoredFolderMeta } from "../utils/folderStore";
+import { keymap } from "@codemirror/view";
 
 // 数据库配置
 const DB_NAME = "fileHandles";
@@ -10,6 +11,7 @@ export const STORE_HANDLES = "handles";
 export const STORE_IMAGE_META = "imageMeta";
 export const STORE_IMAGE_CHUNKS = "imageChunks";
 export const STORE_FOLDERS = "folders";
+export const STORE_CHUNKS = 'chunks';
 
 /**
  * 获取 IndexedDB 工厂对象，兼容不同浏览器
@@ -72,6 +74,11 @@ const ensureStores = (db: IDBDatabase) => {
     const chunkStore = db.createObjectStore(STORE_IMAGE_CHUNKS, { keyPath: "id" });
     chunkStore.createIndex("imageId", "imageId", { unique: false });
     chunkStore.createIndex("index", "index", { unique: false });
+  }
+
+  if(!db.objectStoreNames.contains(STORE_CHUNKS)){
+    const chunkStore = db.createObjectStore(STORE_CHUNKS, {keyPath: "id"});
+    chunkStore.createIndex("imageId","ImageId", {unique: false});
   }
 
   // 文件夹存储（如果需要单独的文件夹表）
