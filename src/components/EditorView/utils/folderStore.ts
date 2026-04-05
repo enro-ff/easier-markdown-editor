@@ -14,7 +14,21 @@ export class ImagefolderStore {
   private db!: IDBDatabase;
   private idx: number = 0;
   private urlMap: Map<string, string> = new Map();
+  private ready: Promise<void>
+  constructor(dbPromise: Promise<IDBDatabase>) {
+    // 确保 ready 能够被 await
+    this.ready = dbPromise.then((database) => {
+      this.db = database;
+      return database;
+    });
+  }
 
+  // 必须确保这个方法在调用 db 之前运行
+  private async ensureReady() {
+    if (!this.db) {
+      await this.ready;
+    }
+  }
   //创建文件id
   private createFileId() {
     return Date.now() * 1000 + this.idx++;
@@ -49,12 +63,6 @@ export class ImagefolderStore {
   async queryParentFolderUrl(folderUrl: string) {
     const parentUrl = this.formatUrl(folderUrl).split("/").slice(0, -1).join("/");
     return parentUrl;
-  }
-
-  constructor(dbPromise: Promise<IDBDatabase>) {
-    dbPromise.then(db => {
-      this.db = db;
-    });
   }
 
   //获取所有文件夹
@@ -124,7 +132,8 @@ export class ImagefolderStore {
         await this.deleteFileById(subFolder.id);
       })
       const store = this.db.transaction(["folders"], "readwrite").objectStore("folders");
-      await request2Promise(store.delete(id));    }
+      await request2Promise(store.delete(id));
+    }
   }
 
   //更改文件夹命名
@@ -163,12 +172,17 @@ export class ImagefolderStore {
   }
 
   //根据url制作本地url
-  async createLocalURLByImageURL(url: string) {
+  createLocalURLByImageURL = async (url: string) => {
+    await this.ensureReady()
+    console.log(this)
+    console.log(this.db)
+    if (!this.db) return url;
     if (this.urlMap.has(url)) return this.urlMap.get(url);
-    const store = this.db.transaction(["folders"], 'readwrite').objectStore('folders');
+    console.log(this.db, "createLocalURLByImageURLdb指针")
+    const store = this.db.transaction(["folders"], 'readonly').objectStore('folders');
     const Files = await request2Promise(store.index('url').getAll(url)) as StoredMetaBase[]
     const imageMeta = Files.find((a) => a.type === 'image') as StoredImageMeta;
-    if (!imageMeta) return url;
+    if (!imageMeta) return url || "";
     const { id, mimeType } = imageMeta;
     const blobs: Blob[] = []
     const chunks = await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').index('imageId').getAll(id)) as StoredChunkMeta[]
@@ -177,7 +191,7 @@ export class ImagefolderStore {
       blobs.push(c.data)
     }
     const imageBlob = new Blob(blobs, { type: mimeType })
-    const newURL = URL.createObjectURL(imageBlob);
+    const newURL = URL.createObjectURL(imageBlob) || "";
     this.urlMap.set(url, newURL);
     return newURL
   }
@@ -189,6 +203,8 @@ export class ImagefolderStore {
     URL.revokeObjectURL(url);
     this.urlMap.delete(url);
   }
+
+  //根据文档内容把所有本地图片存入数据库
 
 }
 
