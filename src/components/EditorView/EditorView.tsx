@@ -34,7 +34,7 @@ export default function MDEditor() {
   );
   const contentRef = useRef<string>(initialContent);
   const fileDropDownRef = useRef<{updateIsSaved: () => void}>(null);
-  const DBPromise = useMemo(() => useIndexedDB(), []);
+  const dbPromise = useMemo(() => useIndexedDB(), []);
 
   const syncAnnotation = Annotation.define<boolean>();
   function syncDispatch(main: EditorView, other: EditorView, tr: Transaction) {
@@ -105,7 +105,7 @@ export default function MDEditor() {
     });
 
     const previewEditorView = new EditorView({
-      state: CreateEditorState(initialContent, [purrmd({ features :{"Image":  false }}), purrmdTheme(), image("auto")]),
+      state: CreateEditorState(initialContent, [purrmd({ features :{"Image":  false }}), purrmdTheme(), image("auto", dbPromise)]),
       parent: previewContainerRef.current!,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
@@ -137,7 +137,7 @@ export default function MDEditor() {
           ref={fileDropDownRef}
           contentRef={contentRef}
           setInitialContent={setInitialContent}
-          DBPromise = {DBPromise}
+          DBPromise = {dbPromise}
           codeEditorViewRef={codeEditorViewRef}
           codeContainerRef={codeContainerRef}
           previewContainerRef={previewContainerRef}

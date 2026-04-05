@@ -10,7 +10,7 @@ const request2Promise = <T>(request: IDBRequest<T>) => {
   });
 }
 
-class ImagefolderStore {
+export class ImagefolderStore {
   private db!: IDBDatabase;
   private idx: number = 0;
   private urlMap: Map<string, string> = new Map();
@@ -124,6 +124,7 @@ class ImagefolderStore {
   async uploadImage(file: File, parentId: number) {
     const url = await this.createUrlByParentId(parentId, file.name);
     const chunkCount = Math.ceil(file.size / chunkSize);
+    console.log(file.size)
     const imageBlob = file.slice()
     const imageMeta: StoredImageMeta = {
       id: this.createFileId(),
@@ -151,21 +152,35 @@ class ImagefolderStore {
   async createLocalURLByImageURL(url: string) {
     if(this.urlMap.has(url))return this.urlMap.get(url);
     const store = this.db.transaction(["folders"], 'readwrite').objectStore('folders');
+    console.log(url)
     const Files = await request2Promise(store.index('url').getAll(url)) as StoredMetaBase[]
+    console.log(Files,"fildes")
     const imageMeta = Files.find((a) => a.type === 'image') as StoredImageMeta;
     if (!imageMeta) return url;
     const {id, mimeType} = imageMeta;
+    console.log(imageMeta)
     const blobs : Blob[] = []
     const chunks = await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').index('imageId').getAll(id)) as StoredChunkMeta[]
+    console.log(chunks)
+    chunks.sort((a, b) => a.index - b.index)
     for(let c of chunks){
       blobs.push(c.data)
     }
     const imageBlob = new Blob(blobs, {type: mimeType})
+    console.log(imageBlob)
     const newURL = URL.createObjectURL(imageBlob);
     this.urlMap.set(url, newURL);
+    console.log(newURL)
     return newURL
   }
 
+  //释放本地url
+  async releaseURL(url: string) {
+    url = this.urlMap.get(url) || "";
+    if(url === "")return;
+    URL.revokeObjectURL(url);
+    this.urlMap.delete(url);
+  }
   
 }
 

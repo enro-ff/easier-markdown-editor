@@ -78,7 +78,7 @@ const ensureStores = (db: IDBDatabase) => {
 
   if(!db.objectStoreNames.contains(STORE_CHUNKS)){
     const chunkStore = db.createObjectStore(STORE_CHUNKS, {keyPath: "id"});
-    chunkStore.createIndex("imageId","ImageId", {unique: false});
+    chunkStore.createIndex("imageId","imageId", {unique: false});
   }
 
   // 文件夹存储（如果需要单独的文件夹表）

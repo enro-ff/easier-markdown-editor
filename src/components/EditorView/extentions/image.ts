@@ -13,6 +13,8 @@ import type { FormattingDisplayMode } from "purrmd";
 import { findNodeURL, isSelectRange, isFocusEventState, isForceUpdateEventState } from "./utils";
 import useIndexedDB from "../hooks/useIndexedDB";
 import { createImageStore } from "../utils/imageStore";
+import createFolderStore from "../utils/folderStore";
+import { ImagefolderStore } from "../utils/folderStore";
 
 export const imageClass = {
   image: "purrmd-cm-image",
@@ -20,6 +22,7 @@ export const imageClass = {
 
 const sharedStore = createImageStore(useIndexedDB());
 const DB_PROTOCOL = "db://";
+let folderStore: ImagefolderStore;
 
 class ImageWidget extends WidgetType {
   private src: string;
@@ -34,15 +37,8 @@ class ImageWidget extends WidgetType {
 
   toDOM() {
     const img = document.createElement("img");
-    if (this.src.startsWith(DB_PROTOCOL)) {
-      sharedStore
-        .getObjectURL(this.src.replace(DB_PROTOCOL, ""))
-        .then((url) => {
-          img.src = url;
-        })
-        .catch(() => {
-          img.alt = "Image missing";
-        });
+    if (!this.src.startsWith('http:') && !this.src.startsWith('https:')) {
+      folderStore.createLocalURLByImageURL(this.src).then(url => img.src = url || this.src)
     } else {
       img.src = this.src;
     }
@@ -101,9 +97,10 @@ function imageDecorations(
   return Decoration.set(decorations, true);
 }
 
-export function image(mode: FormattingDisplayMode, config?: ImageConfig): Extension {
+export function image(mode: FormattingDisplayMode, dbPromise: Promise<IDBDatabase>, config?: ImageConfig): Extension {
   if (config == null) config = {};
   config.imageAlwaysShow ??= true;
+  folderStore = createFolderStore(dbPromise);
   const imagePlugin: Extension = ViewPlugin.fromClass(
     class {
       private updateCount = 0;
