@@ -30,7 +30,7 @@ export class ImagefolderStore {
   }
   //根据父文件夹id和子文件名生成url
   private async createUrlByParentId(parentId: number, name: string) {
-    const parentMeta = await this.getFolderById(parentId);
+    const parentMeta = await this.getFileById(parentId);
     const parentUrl = parentMeta === undefined ? './' : parentMeta.url;
     return this.formatUrl(parentUrl + '/' + name);
   }
@@ -70,16 +70,16 @@ export class ImagefolderStore {
   }
 
   //根据文件夹id获取文件夹元数据
-  async getFolderById(id: number) {
+  async getFileById(id: number) {
     const store = this.db.transaction(["folders"], "readonly").objectStore("folders");
     const request = store.get(id);
     const result = await request2Promise(request);
-    return result as StoredFolderMeta | undefined;
+    return result as StoredFolderMeta | StoredImageMeta | undefined;
   }
 
   //根据父文件夹id创建文件夹
   async createFolderByParentId(parentId: number, name: string) {
-    const parentMeta = await this.getFolderById(parentId);
+    const parentMeta = await this.getFileById(parentId);
     const url = parentMeta!.url + "/" + name;
     const folderMeta: StoredFolderMeta = {
       type: "folder",
@@ -100,21 +100,36 @@ export class ImagefolderStore {
   }
 
   //删除文件夹及所有子文件夹和文件
-  async deleteFolderById(id: number) {
-    const subFolderList = await this.getSubFolderById(id);
-    if (subFolderList.length === 0) {
-      return;
+  async deleteFileById(id: number) {
+    const meta = await this.getFileById(id);
+    if (meta === undefined) return;
+    if (meta.type === "image") {
+      this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').index('imageId').openCursor(IDBKeyRange.only(id)).onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        }
+      };
+
     }
-    subFolderList.forEach(async (subFolder) => {
-      await this.deleteFolderById(subFolder.id);
-    })
     const store = this.db.transaction(["folders"], "readwrite").objectStore("folders");
     await request2Promise(store.delete(id));
+    if (meta.type === "folder") {
+      const subFolderList = await this.getSubFolderById(id);
+      if (subFolderList.length === 0) {
+        return;
+      }
+      subFolderList.forEach(async (subFolder) => {
+        await this.deleteFileById(subFolder.id);
+      })
+      const store = this.db.transaction(["folders"], "readwrite").objectStore("folders");
+      await request2Promise(store.delete(id));    }
   }
 
   //更改文件夹命名
   async changeFolderNameById(id: number, name: string) {
-    const folderMeta = await this.getFolderById(id);
+    const folderMeta = await this.getFileById(id);
     folderMeta!.name = name;
     const store = this.db.transaction(["folders"], "readwrite").objectStore("folders");
     await request2Promise(store.put(folderMeta));
@@ -124,7 +139,6 @@ export class ImagefolderStore {
   async uploadImage(file: File, parentId: number) {
     const url = await this.createUrlByParentId(parentId, file.name);
     const chunkCount = Math.ceil(file.size / chunkSize);
-    console.log(file.size)
     const imageBlob = file.slice()
     const imageMeta: StoredImageMeta = {
       id: this.createFileId(),
@@ -150,38 +164,32 @@ export class ImagefolderStore {
 
   //根据url制作本地url
   async createLocalURLByImageURL(url: string) {
-    if(this.urlMap.has(url))return this.urlMap.get(url);
+    if (this.urlMap.has(url)) return this.urlMap.get(url);
     const store = this.db.transaction(["folders"], 'readwrite').objectStore('folders');
-    console.log(url)
     const Files = await request2Promise(store.index('url').getAll(url)) as StoredMetaBase[]
-    console.log(Files,"fildes")
     const imageMeta = Files.find((a) => a.type === 'image') as StoredImageMeta;
     if (!imageMeta) return url;
-    const {id, mimeType} = imageMeta;
-    console.log(imageMeta)
-    const blobs : Blob[] = []
+    const { id, mimeType } = imageMeta;
+    const blobs: Blob[] = []
     const chunks = await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').index('imageId').getAll(id)) as StoredChunkMeta[]
-    console.log(chunks)
     chunks.sort((a, b) => a.index - b.index)
-    for(let c of chunks){
+    for (let c of chunks) {
       blobs.push(c.data)
     }
-    const imageBlob = new Blob(blobs, {type: mimeType})
-    console.log(imageBlob)
+    const imageBlob = new Blob(blobs, { type: mimeType })
     const newURL = URL.createObjectURL(imageBlob);
     this.urlMap.set(url, newURL);
-    console.log(newURL)
     return newURL
   }
 
   //释放本地url
   async releaseURL(url: string) {
     url = this.urlMap.get(url) || "";
-    if(url === "")return;
+    if (url === "") return;
     URL.revokeObjectURL(url);
     this.urlMap.delete(url);
   }
-  
+
 }
 
 export default (dbPromise: Promise<IDBDatabase>) => {

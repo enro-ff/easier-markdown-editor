@@ -99,9 +99,9 @@ const ImageFolder = () => {
                         <Input value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
                     </Modal>
                     <Button onClick={async () => {
-                        await folderStore.deleteFolderById(folderSelected)
+                        await folderStore.deleteFileById(folderSelected)
                         generateTreeData()
-                    }}>删除文件夹</Button>
+                    }}>删除文件</Button>
                     <Button onClick={async () => {
                         const currentName = String(folderTree.filter(item => item.key === folderSelected)[0].title || "")
                         setNameInput(currentName)
