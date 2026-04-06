@@ -23,6 +23,40 @@
   margin-left: auto
 }
 
+.editor-main {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 56px); /* 根据你的工具栏高度调整 */
+  overflow: hidden;
+  position: relative;
+}
+
+.code-panel,
+.preview-panel {
+  overflow: auto;
+  height: 100%;
+}
+
+.drag-bar {
+  width: 6px;
+  background-color: #e8e8e8;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.drag-bar:hover {
+  background-color: #b3b3b3;
+}
+
+.drag-handle {
+  width: 2px;
+  height: 40px;
+  background-color: #888;
+  border-radius: 2px;
+}
 
 
 

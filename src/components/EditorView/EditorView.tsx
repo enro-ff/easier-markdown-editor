@@ -1,22 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Radio, Splitter } from "antd";
 import "./EditorView.css";
 import { useEditorSyncScroll } from "./hooks/useEditorSyncScroll";
 import { history } from "@codemirror/commands";
-import {
-  Annotation,
-  EditorState,
-} from "@codemirror/state";
+import { Annotation, EditorState } from "@codemirror/state";
 import { Transaction, type Extension } from "@codemirror/state";
 import { EditorView, keymap, ViewPlugin } from "@codemirror/view";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
   defaultHighlightStyle,
-  syntaxHighlighting
+  syntaxHighlighting,
 } from "@codemirror/language";
-import { purrmd, purrmdTheme } from 'purrmd';
-import {image} from './extentions/image.ts'
+import { purrmd, purrmdTheme } from "purrmd";
+import { image } from "./extentions/image.ts";
 import { defaultKeymap, historyKeymap } from "@codemirror/commands";
 import FileDropDown from "./Component/FileDropdown/FileDropdown";
 import useIndexedDB from "./hooks/useIndexedDB";
@@ -25,6 +22,9 @@ type ViewMode = "code" | "split" | "preview";
 
 export default function MDEditor() {
   const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const [splitRatio, setSplitRatio] = useState<number>(50);
+  const isDrag = useRef<boolean>(false)
+  const containerRef = useRef<HTMLDivElement>(null);
   const previewEditorViewRef = useRef<EditorView | null>(null);
   const codeEditorViewRef = useRef<EditorView | null>(null);
   const codeContainerRef = useRef<HTMLDivElement | null>(null);
@@ -33,8 +33,8 @@ export default function MDEditor() {
     `<img src="url" alt="foo" />`,
   );
   const contentRef = useRef<string>(initialContent);
-  const fileDropDownRef = useRef<{updateIsSaved: () => void}>(null);
-  const dbPromise = useMemo(() => useIndexedDB(), []);
+  const fileDropDownRef = useRef<{ updateIsSaved: () => void }>(null);
+  const dbPromise = useIndexedDB();
 
   const syncAnnotation = Annotation.define<boolean>();
   function syncDispatch(main: EditorView, other: EditorView, tr: Transaction) {
@@ -86,6 +86,43 @@ export default function MDEditor() {
     });
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDrag.current = true;
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!containerRef.current || !isDrag.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let newRatio = ((e.clientX - rect.left) / rect.width) * 100;
+    newRatio = Math.min(Math.max(newRatio, 10), 90);
+    setSplitRatio(newRatio);
+  };
+
+  const handleMouseUp = () => {
+    isDrag.current = false;
+    document.body.style.userSelect = "";
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  }
+
+  let codeFlex = 1, previewFlex = 1, showDragBar = false;
+  if(viewMode === 'code'){
+    codeFlex = 1;
+    previewFlex = 0;
+    showDragBar = false
+  }else if(viewMode === 'preview'){
+    codeFlex = 0;
+    previewFlex = 1;
+    showDragBar = false
+  }else{
+    codeFlex = splitRatio;
+    previewFlex = 100 - splitRatio;
+    showDragBar = true;
+  }
+
   const codekeymap = keymap.of([...defaultKeymap, ...historyKeymap]);
 
   useEffect(() => {
@@ -105,7 +142,11 @@ export default function MDEditor() {
     });
 
     const previewEditorView = new EditorView({
-      state: CreateEditorState(initialContent, [purrmd({ features :{"Image":  false }}), purrmdTheme(), image("auto", dbPromise)]),
+      state: CreateEditorState(initialContent, [
+        purrmd({ features: { Image: false } }),
+        purrmdTheme(),
+        image("auto", dbPromise),
+      ]),
       parent: previewContainerRef.current!,
       dispatch: (tr) => {
         if (codeEditorViewRef.current && previewEditorViewRef.current) {
@@ -120,7 +161,7 @@ export default function MDEditor() {
 
     codeEditorViewRef.current = codeEditorView;
     previewEditorViewRef.current = previewEditorView;
-    contentRef.current = initialContent
+    contentRef.current = initialContent;
 
     return () => {
       codeEditorView.destroy();
@@ -137,7 +178,7 @@ export default function MDEditor() {
           ref={fileDropDownRef}
           contentRef={contentRef}
           setInitialContent={setInitialContent}
-          DBPromise = {dbPromise}
+          DBPromise={dbPromise}
           codeEditorViewRef={codeEditorViewRef}
           codeContainerRef={codeContainerRef}
           previewContainerRef={previewContainerRef}
@@ -153,23 +194,27 @@ export default function MDEditor() {
           <Radio.Button value="preview">Preview Only</Radio.Button>
         </Radio.Group>
       </div>
+       <div className="editor-main" ref={containerRef}>
+        <div
+          className="code-panel"
+          style={{ flex: `${codeFlex} 1 0%`, display: codeFlex === 0 ? "none" : "flex" }}
+        >
+          <div ref={codeContainerRef} style={{ width: "100%", height: "100%" }} />
+        </div>
 
-      <Splitter className="editor-main">
+        {showDragBar && (
+          <div className="drag-bar" onMouseDown={handleMouseDown}>
+            <div className="drag-handle" />
+          </div>
+        )}
+
         <div
-          style={{
-            display: viewMode === "preview" ? "none" : "block",
-            width: viewMode === "split" ? "50%" : "100%",
-          }}
-          ref={codeContainerRef} // eslint-disable-line no-eval
-        ></div>
-        <div
-          style={{
-            display: viewMode === "code" ? "none" : "block",
-            width: viewMode === "split" ? "50%" : "100%",
-          }}
-          ref={previewContainerRef} // eslint-disable-line no-eval
-        ></div>
-      </Splitter>
+          className="preview-panel"
+          style={{ flex: `${previewFlex} 1 0%`, display: previewFlex === 0 ? "none" : "flex" }}
+        >
+          <div ref={previewContainerRef} style={{ width: "100%", height: "100%" }} />
+        </div>
+      </div>
     </div>
   );
 }

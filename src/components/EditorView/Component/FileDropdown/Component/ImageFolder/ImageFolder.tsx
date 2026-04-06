@@ -9,13 +9,6 @@ import type { TreeNode } from "../../../../utils/buildDataTree";
 
 import "./ImageFolder.css";
 
-interface UploadImageItemProps {
-    codeEditorViewRef: RefObject<EditorView | null>;
-    codeContainerRef: RefObject<HTMLDivElement | null>;
-    previewContainerRef: RefObject<HTMLDivElement | null>;
-    dbPromise: Promise<IDBDatabase>;
-}
-
 const ImageFolder = () => {
     const folderStore = createFolderStore(useIndexedDB());
     const [folderOpen, setFolderOpen] = useState<boolean>(false);
