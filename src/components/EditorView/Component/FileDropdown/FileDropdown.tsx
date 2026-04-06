@@ -25,9 +25,6 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
   contentRef,
   setInitialContent,
   DBPromise,
-  codeEditorViewRef,
-  codeContainerRef,
-  previewContainerRef
 }) => {
   const {
     menuItems,

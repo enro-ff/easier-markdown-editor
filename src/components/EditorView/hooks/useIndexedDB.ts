@@ -1,6 +1,4 @@
-import type { StoredImageMeta } from "../utils/imageStore";
 import type { StoredFolderMeta } from "../utils/folderStore";
-import { keymap } from "@codemirror/view";
 
 // 数据库配置
 const DB_NAME = "fileHandles";

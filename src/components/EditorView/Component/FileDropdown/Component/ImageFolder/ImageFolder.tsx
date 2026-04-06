@@ -1,6 +1,4 @@
-import type { RefObject } from "react";
 import { useState, useRef, useEffect } from "react";
-import { EditorView } from "@codemirror/view";
 import { Button, Modal, Space, Tree, Input, Splitter } from "antd";
 import { PictureOutlined } from "@ant-design/icons";
 import useIndexedDB from "../../../../hooks/useIndexedDB";
@@ -79,7 +77,7 @@ const ImageFolder = () => {
                         <div>
                             <Tree
                                 treeData={folderTree}
-                                onSelect={async (keys, event) => {
+                                onSelect={async (_keys, event) => {
                                     const selectedNode = event.selectedNodes[0] as TreeNode;
                                     folderClicked(selectedNode);
                                 }}

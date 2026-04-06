@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Radio, Splitter } from "antd";
+import { Radio} from "antd";
 import "./EditorView.css";
 import { useEditorSyncScroll } from "./hooks/useEditorSyncScroll";
 import { history } from "@codemirror/commands";
@@ -86,7 +86,7 @@ export default function MDEditor() {
     });
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = () => {
     isDrag.current = true;
     document.body.style.userSelect = "none";
     document.addEventListener("mousemove", handleMouseMove);
