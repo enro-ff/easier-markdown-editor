@@ -19,7 +19,6 @@ export class ImagefolderStore {
     // 确保 ready 能够被 await
     this.ready = dbPromise.then((database) => {
       this.db = database;
-      return database;
     });
   }
 
@@ -144,7 +143,7 @@ export class ImagefolderStore {
     await request2Promise(store.put(folderMeta));
   }
 
-  //上传图片
+  //上传图片或者文件夹
   async uploadImage(file: File, parentId: number) {
     const url = await this.createUrlByParentId(parentId, file.name);
     const chunkCount = Math.ceil(file.size / chunkSize);
@@ -204,7 +203,94 @@ export class ImagefolderStore {
     this.urlMap.delete(url);
   }
 
-  //根据文档内容把所有本地图片存入数据库
+  // 在 ImagefolderStore 类中添加以下方法
+
+  /**
+   * 从 webkitdirectory 得到的 FileList 上传整个文件夹
+   * @param files 通过 <input webkitdirectory> 获得的 FileList
+   * @param rootParentId 目标根文件夹的 ID（上传的文件/文件夹将放在该文件夹下）
+   */
+  async uploadFolderFromWebkitFileList(files: FileList, rootParentId: number) {
+    await this.ensureReady();
+
+    // 1. 收集所有文件的相对路径信息
+    type FileInfo = { file: File; relativePath: string; dirPath: string };
+    const fileInfos: FileInfo[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      console.log(file)
+      const relativePath = (file as any).webkitRelativePath; // 格式: "folder/sub/file.jpg"
+      if (!relativePath) continue;
+
+      const parts = relativePath.split('/');
+      parts.pop()
+      const dirPath = parts.join('/'); // 文件夹路径（相对于所选根目录）
+
+      fileInfos.push({ file, relativePath, dirPath });
+    }
+
+    // 2. 收集所有需要创建的文件夹路径（去重）
+    const folderPaths = new Set<string>();
+    for (const { dirPath } of fileInfos) {
+      if (dirPath === '') continue; // 根目录本身不需要创建
+      const parts = dirPath.split('/');
+      for (let i = 1; i <= parts.length; i++) {
+        folderPaths.add(parts.slice(0, i).join('/'));
+      }
+    }
+
+    // 3. 按深度排序（确保父文件夹先创建）
+    const sortedPaths = Array.from(folderPaths).sort((a, b) => a.split('/').length - b.split('/').length);
+
+    // 4. 维护路径 -> 文件夹ID 的映射
+    const folderIdMap = new Map<string, number>();
+    folderIdMap.set('', rootParentId); // 空路径对应根文件夹
+
+    // 5. 逐级创建文件夹
+    for (const path of sortedPaths) {
+      const parts = path.split('/');
+      const parentPath = parts.slice(0, -1).join('/');
+      const parentId = folderIdMap.get(parentPath);
+      if (!parentId) throw new Error(`Parent folder not found for path: ${path}`);
+
+      const folderName = parts[parts.length - 1];
+
+      // 检查是否已存在同名子文件夹
+      const existing = await this.getSubFolderByName(parentId, folderName);
+      if (existing) {
+        folderIdMap.set(path, existing.id);
+      } else {
+        const newFolder = await this.createFolderByParentId(parentId, folderName);
+        folderIdMap.set(path, newFolder.id);
+      }
+    }
+
+    // 6. 并行上传所有图片文件
+    const uploadPromises = fileInfos.map(async ({ file, dirPath }) => {
+      const parentId = folderIdMap.get(dirPath) ?? rootParentId;
+      // 仅上传图片类型（可根据需要调整）
+      if (file.type.startsWith('image/')) {
+        await this.uploadImage(file, parentId);
+      } else {
+        console.warn(`Skipping non-image file: ${file.name}`);
+      }
+    });
+
+    await Promise.all(uploadPromises);
+    console.log(`Uploaded ${fileInfos.length} files`);
+  }
+
+  /**
+   * 根据父文件夹 ID 和名称获取子文件夹（如果存在）
+   */
+  private async getSubFolderByName(parentId: number, name: string): Promise<StoredFolderMeta | undefined> {
+    const store = this.db.transaction(['folders'], 'readonly').objectStore('folders');
+    const index = store.index('parentId');
+    const request = index.getAll(parentId);
+    const children = await request2Promise(request) as StoredMetaBase[];
+    return children.find(c => c.type === 'folder' && c.name === name) as StoredFolderMeta | undefined;
+  }
 
 }
 

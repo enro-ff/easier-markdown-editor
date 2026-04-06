@@ -22,7 +22,7 @@ const buildDataTree = (metaList: StoredMetaBase[]): TreeNode[] => {
             name: "root",
             type: "folder",
             parentId: 0,
-            url: "./",
+            url: ".",
         },
         children: [],
     },
@@ -34,7 +34,7 @@ const buildDataTree = (metaList: StoredMetaBase[]): TreeNode[] => {
             name: "other",
             type: "folder",
             parentId: 0,
-            url: "../",
+            url: "..",
         },
         children: [],
     }

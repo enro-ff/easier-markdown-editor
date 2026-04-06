@@ -56,7 +56,7 @@ const ensureStores = (db: IDBDatabase) => {
       name: "root",
       type: "folder",
       parentId: 0,
-      url: "./",
+      url: ".",
     } as StoredFolderMeta);
     
     // 初始化上级文件夹
@@ -65,7 +65,7 @@ const ensureStores = (db: IDBDatabase) => {
       name: "other",
       type: "folder",
       parentId: 0,
-      url: "../",
+      url: "..",
     } as StoredFolderMeta);
   }
 

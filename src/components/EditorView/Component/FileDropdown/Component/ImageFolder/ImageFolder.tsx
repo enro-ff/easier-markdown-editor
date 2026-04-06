@@ -2,31 +2,12 @@ import type { RefObject } from "react";
 import { useState, useRef, useEffect } from "react";
 import { EditorView } from "@codemirror/view";
 import { Button, Modal, Space, Tree, Input, Splitter } from "antd";
-import { UploadOutlined, PictureOutlined } from "@ant-design/icons";
+import { PictureOutlined } from "@ant-design/icons";
 import useIndexedDB from "../../../../hooks/useIndexedDB";
 import createFolderStore from "../../../../utils/folderStore";
 import type { TreeNode } from "../../../../utils/buildDataTree";
-import ImagePreview from "../ImagePreview/ImagePreview";
 
 import "./ImageFolder.css";
-
-const initFolderList = [
-    {
-        id: 1,
-        name: "root",
-        type: "folder",
-        parentId: 0,
-        url: "./",
-    },
-    {
-        id: 2,
-        name: "other",
-        type: "folder",
-        parentId: 0,
-        url: "../",
-    }
-]
-
 
 interface UploadImageItemProps {
     codeEditorViewRef: RefObject<EditorView | null>;
@@ -42,18 +23,19 @@ const ImageFolder = () => {
     const [folderTree, setFolderTree] = useState<TreeNode[]>([]);
     const [nameModalOpen, setNameModalOpen] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const folderInputRef = useRef<HTMLInputElement>(null);
     const [nameInput, setNameInput] = useState<string>("");
     const [previewImageSrc, setPreviewImageSrc] = useState<string>("");
 
     useEffect(() => {
         if (folderSelected?.raw?.type === 'image') {
             const url = folderSelected.raw.url;
-            if(!url.startsWith('http') && !url.startsWith('https')){
-                 folderStore.createLocalURLByImageURL(url).then((localURL) => {
+            if (!url.startsWith('http') && !url.startsWith('https')) {
+                folderStore.createLocalURLByImageURL(url).then((localURL) => {
                     setPreviewImageSrc(localURL || "");
-                 });
+                });
             }
-            else{
+            else {
                 setPreviewImageSrc(url);
             }
         } else {
@@ -75,6 +57,11 @@ const ImageFolder = () => {
     const openPicker = () => {
         fileInputRef.current!.value = '';
         fileInputRef.current!.click();
+    }
+
+    const openFolderPicker = () => {
+        folderInputRef.current!.value = '';
+        folderInputRef.current!.click();
     }
 
     return (
@@ -136,11 +123,12 @@ const ImageFolder = () => {
                                 }
                             }}>更改文件夹命名</Button>
                             <Button onClick={openPicker}>上传图片</Button>
+                            <Button onClick={openFolderPicker}>上传文件夹</Button>
                         </div>
                         <div>
                             <div>图片预览</div>
-                             {previewImageSrc && <img src = {previewImageSrc}/>}
-                            
+                            {previewImageSrc && <img src={previewImageSrc} />}
+
                         </div>
                     </Splitter>
                 </Modal>
@@ -148,7 +136,6 @@ const ImageFolder = () => {
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    // multiple
                     onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
                         if (!e.target.files || !fileInputRef.current || !folderSelected) return;
                         console.log(e)
@@ -156,8 +143,21 @@ const ImageFolder = () => {
                         generateTreeData();
                     }
 
-                    }
+                    }/>
+                <input
+                    ref={folderInputRef}
+                    type="file"
+                    {...{webkitdirectory: "true"}}
+                    multiple
+                    onChange={async (e) => {
+                        if (!e.target.files || e.target.files.length === 0 || !folderSelected) return;
+                        // 上传整个文件夹
+                        await folderStore.uploadFolderFromWebkitFileList(e.target.files, folderSelected.raw.id);
+                        await generateTreeData();
+                        e.target.value = ''; // 清空
+                    }}
                 />
+
             </Space >
         </>
     );
