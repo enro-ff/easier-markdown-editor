@@ -40,40 +40,6 @@ const ensureStores = (db: IDBDatabase) => {
     db.createObjectStore(STORE_HANDLES, { keyPath: "id" });
   }
 
-  // 图片元数据存储
-  if (!db.objectStoreNames.contains(STORE_IMAGE_META)) {
-    const store = db.createObjectStore(STORE_IMAGE_META, { keyPath: "id" });
-    store.createIndex("url", "url", { unique: true });
-    store.createIndex("parentId", "parentId", { unique: false });
-    store.createIndex("id", "id", { unique: true });
-    store.createIndex("hash", "hash", { unique: false });
-    
-    // 初始化根文件夹
-    store.add({
-      id: 1,
-      name: "root",
-      type: "folder",
-      parentId: 0,
-      url: ".",
-    } as StoredFolderMeta);
-    
-    // 初始化上级文件夹
-    store.add({
-      id: 2,
-      name: "other",
-      type: "folder",
-      parentId: 0,
-      url: "..",
-    } as StoredFolderMeta);
-  }
-
-  // 图片分片存储
-  if (!db.objectStoreNames.contains(STORE_IMAGE_CHUNKS)) {
-    const chunkStore = db.createObjectStore(STORE_IMAGE_CHUNKS, { keyPath: "id" });
-    chunkStore.createIndex("imageId", "imageId", { unique: false });
-    chunkStore.createIndex("index", "index", { unique: false });
-  }
-
   if(!db.objectStoreNames.contains(STORE_CHUNKS)){
     const chunkStore = db.createObjectStore(STORE_CHUNKS, {keyPath: "id"});
     chunkStore.createIndex("imageId","imageId", {unique: false});
@@ -93,7 +59,7 @@ const ensureStores = (db: IDBDatabase) => {
       name: "root",
       type: "folder",
       parentId: 0,
-      url: "./",
+      url: ".",
     } as StoredFolderMeta);
     
     // 初始化上级文件夹
@@ -102,7 +68,7 @@ const ensureStores = (db: IDBDatabase) => {
       name: "other",
       type: "folder",
       parentId: 0,
-      url: "../",
+      url: "..",
     } as StoredFolderMeta);
   }
 };
