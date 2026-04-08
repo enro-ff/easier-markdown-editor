@@ -1,13 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { Button, Modal, Space, Tree, Input, Splitter } from "antd";
+import type { EditorView } from "@codemirror/view";
 import { PictureOutlined } from "@ant-design/icons";
 import useIndexedDB from "../../../../hooks/useIndexedDB";
 import createFolderStore from "../../../../utils/folderStore";
 import type { TreeNode } from "../../../../utils/buildDataTree";
+import md2pdf from '../../../../hooks/useMd2pdf'
 
 import "./ImageFolder.css";
 
-const ImageFolder = () => {
+interface ImageFolderProps {
+  codemirrorViewRef: React.RefObject<EditorView | null>;
+}
+
+const ImageFolder = ( props :  ImageFolderProps) => {
   const folderStore = createFolderStore(useIndexedDB());
   const [folderOpen, setFolderOpen] = useState<boolean>(false);
   const [folderSelected, setFolderSelected] = useState<TreeNode | null>(null);
@@ -63,6 +69,9 @@ const ImageFolder = () => {
           }}
         >
           图片文件夹
+        </Button>
+        <Button onClick={() => md2pdf({view: props.codemirrorViewRef.current!, getImageUrl: async () => folderStore.createLocalURLByImageURL()})}>
+          导出为pdf
         </Button>
         <Modal
           title="图片文件夹"
@@ -146,7 +155,7 @@ const ImageFolder = () => {
           onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
             if (!e.target.files || !fileInputRef.current || !folderSelected)
               return;
-            
+
             await folderStore.uploadImage(
               e.target.files[0],
               folderSelected.raw.id,
@@ -160,7 +169,6 @@ const ImageFolder = () => {
           {...{ webkitdirectory: "true" }}
           multiple
           onChange={async (e) => {
-            console.log(e);
             if (
               !e.target.files ||
               e.target.files.length === 0 ||

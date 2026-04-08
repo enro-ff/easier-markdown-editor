@@ -19,6 +19,8 @@
     "@uiw/codemirror-extensions-events": "^4.25.4",
     "@uiw/react-codemirror": "^4.25.4",
     "antd": "^6.2.0",
+    "dompdf.js": "^1.2.0",
+    "lezer": "^0.13.5",
     "purrmd": "^0.1.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

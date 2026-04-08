@@ -8,15 +8,15 @@ import type { EditorView } from "@codemirror/view";
 import { DownOutlined } from "@ant-design/icons";
 import { Dropdown, Space } from "antd";
 import { useMenuItem } from "./hooks/useMenuItem";
-import ImageFolder from "./Component/ImageFolder/ImageFolder"
-import "./FileDropdown.css";
+import ImageFolder from "./Component/ImageFolder/ImageFolder";
 
+import "./FileDropdown.css";
 interface FileDropDownProps {
   ref: React.Ref<{ updateIsSaved: () => void }>;
   contentRef: RefObject<string>;
   setInitialContent: Dispatch<React.SetStateAction<string>>;
   DBPromise: Promise<IDBDatabase>;
-  codeEditorViewRef: React.MutableRefObject<EditorView | null>;
+  codeEditorViewRef: React.RefObject<EditorView | null>;
   codeContainerRef: React.MutableRefObject<HTMLDivElement | null>;
   previewContainerRef: React.MutableRefObject<HTMLDivElement | null>;
 }
@@ -25,6 +25,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
   contentRef,
   setInitialContent,
   DBPromise,
+  codeEditorViewRef,
 }) => {
   const {
     menuItems,
@@ -75,8 +76,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
           </Space>
         </a>
       </Dropdown>
-      <ImageFolder
-      />
+      <ImageFolder codemirrorViewRef={codeEditorViewRef} />
       <p className="filename">
         {fileName}
         {isSaved ? "" : "*(unsaved)"}
