@@ -47,7 +47,6 @@ export function useFileSave(
     const query = await handle.queryPermission({});
     const permission = query === "granted";
     setIsPermitted(permission);
-    console.log(isPermitted);
   };
 
   const storeFileHandleChange = async (handle: FileSystemFileHandle | null) => {

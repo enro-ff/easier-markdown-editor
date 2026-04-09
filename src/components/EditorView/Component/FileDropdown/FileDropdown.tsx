@@ -87,7 +87,6 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
           <button onClick={getPerimisson}>授权</button>
         )}
       </p>
-      <button onClick={() => aiGenCss()}>AI生成CSS</button>
     </>
   );
 };

@@ -69,7 +69,6 @@ export class ImagefolderStore {
     const store = this.db.transaction(["folders"], "readonly").objectStore("folders");
     const request = store.getAll();
     const result = await request2Promise(request);
-    console.log("queryAllFolders: result", result);
     if (result !== undefined) {
       return buildDataTree(result as StoredFolderMeta[]);
     }
@@ -173,11 +172,8 @@ export class ImagefolderStore {
   //根据url制作本地url
   createLocalURLByImageURL = async (url: string) => {
     await this.ensureReady()
-    console.log(this)
-    console.log(this.db)
     if (!this.db) return url;
     if (this.urlMap.has(url)) return this.urlMap.get(url);
-    console.log(this.db, "createLocalURLByImageURLdb指针")
     const store = this.db.transaction(["folders"], 'readonly').objectStore('folders');
     const Files = await request2Promise(store.index('url').getAll(url)) as StoredMetaBase[]
     const imageMeta = Files.find((a) => a.type === 'image') as StoredImageMeta;
@@ -219,7 +215,6 @@ export class ImagefolderStore {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      console.log(file)
       const relativePath = (file as any).webkitRelativePath; // 格式: "folder/sub/file.jpg"
       if (!relativePath) continue;
 
@@ -278,7 +273,6 @@ export class ImagefolderStore {
     });
 
     await Promise.all(uploadPromises);
-    console.log(`Uploaded ${fileInfos.length} files`);
   }
 
   /**

@@ -1,27 +1,23 @@
-import { useState, useRef, type RefObject} from "react";
+import { useState, useRef, type RefObject } from "react";
 import { Input, Button, Modal, Row, Col, Space } from "antd";
 import { EditorView } from "@codemirror/view";
 import { parseCmToHtml, printHtmlToPdf } from '../../../../hooks/useMd2pdf'
 import aiGenCSS from '../../../../utils/aiGenCSS'
 
-interface GenPDFProps{
-  viewRef: RefObject<EditorView>;
+interface GenPDFProps {
+  viewRef: RefObject<EditorView | null>;
+  getImageUrl: (url: string) => Promise<string | undefined>;
 }
 const GenPDF = (props: GenPDFProps) => {
-  const { viewRef } = props;
+  const { viewRef, getImageUrl } = props;
   const [customCss, setCustomCss] = useState<string>("")
   const [visible, setVisible] = useState(false)
   const [userInput, setUserInput] = useState<string>("")
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // 简单的 getImageUrl：保持原样（也可以改为解析工作区相对路径）
-  const getImageUrl = async (url: string) => {
-    return undefined as string | undefined;
-  }
-
   // 调用AI生成CSS
   const genCustomCss = async () => {
-    const prompt = userInput || `请根据以下Markdown内容生成自定义CSS样式，确保打印时符合A4纸张尺寸：\n${viewRef.current?.state.doc.toString()}`;
+    const prompt = userInput + `请根据以下Markdown内容生成自定义CSS样式，确保打印时符合A4纸张尺寸：\n${viewRef.current?.state.doc.toString()}`;
     const css = await aiGenCSS(prompt) || "";
     setCustomCss(css);
   }
@@ -32,20 +28,18 @@ const GenPDF = (props: GenPDFProps) => {
     setTimeout(async () => {
       try {
         if (!iframeRef.current) return;
-        const el = await parseCmToHtml({ view : viewRef.current! , getImageUrl });
-        
+        const el = await parseCmToHtml({ view: viewRef.current!, getImageUrl });
+
         // 如果用户提供了 ai 样式输入，尝试生成并注入
         let css = "";
         if (customCss) {
-           css = customCss;
+          css = customCss;
         }
-        
+
         // 注入自定义 CSS
-        if (css) {
-          const styleEl = document.createElement("style");
-          styleEl.textContent = css;
-          el.prepend(styleEl);
-        }
+        const styleEl = document.createElement("style");
+        styleEl.textContent = css;
+        el.prepend(styleEl);
 
         printHtmlToPdf(el, "CodeMirror-Markdown-Export", iframeRef.current);
       } catch (e) {
@@ -78,9 +72,9 @@ const GenPDF = (props: GenPDFProps) => {
         <Row gutter={16}>
           <Col span={17}>
             <div style={{ height: '75vh', overflow: 'auto', background: '#e8e8e8', borderRadius: '4px', border: '1px solid #d9d9d9' }}>
-              <iframe 
-                ref={iframeRef} 
-                style={{ width: '100%', minHeight: '100%', border: 'none', display: 'block' }} 
+              <iframe
+                ref={iframeRef}
+                style={{ width: '100%', minHeight: '100%', border: 'none', display: 'block' }}
                 title="pdf-preview"
               />
             </div>
@@ -92,9 +86,9 @@ const GenPDF = (props: GenPDFProps) => {
                 await genCustomCss();
                 openPreview();
               }} block>生成AI CSS</Button>
-              <Input 
-                value={userInput} 
-                onChange={(e) => setUserInput(e.target.value)} 
+              <Input
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
                 placeholder="自定义提示"
                 style={{ marginBottom: 12 }}
               />
@@ -102,13 +96,13 @@ const GenPDF = (props: GenPDFProps) => {
                 openPreview();
               }} block>刷新预览</Button>
               <Button size="large" onClick={() => setVisible(false)} block>关闭</Button>
-              
+
               <div style={{ marginTop: 24 }}>
                 <div style={{ marginBottom: 8, fontWeight: 'bold' }}>自定义额外 CSS</div>
-                <Input.TextArea 
-                  value={customCss} 
-                  onChange={(e) => setCustomCss(e.target.value)} 
-                  rows={18} 
+                <Input.TextArea
+                  value={customCss}
+                  onChange={(e) => setCustomCss(e.target.value)}
+                  rows={18}
                   placeholder="例如: 
 h1 { color: red; }
 .markdown-print-body { font-size: 14px; }"

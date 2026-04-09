@@ -1,7 +1,7 @@
 import { MLCEngine, type ChatCompletionMessageParam } from "@mlc-ai/web-llm";
 
 let engine: MLCEngine | null = null;
-const modelId = "Qwen2-0.5B-Instruct-q4f16_1-MLC";
+const modelId = "Qwen3-1.7B-q4f16_1-MLC";
 
 async function getEngine() {
   if (engine) return engine;
@@ -27,14 +27,14 @@ async function aiGenCSS(prompt: string) {
         content: `你是一个 CSS 专家。请根据用户的需求，生成一段适合 Markdown 文档打印在 A4 纸张上的 CSS 代码。
                   只包含 CSS 规则，不要任何 Markdown 代码块包裹，也不要任何解释说明文字。
                   你的输出应该直接可以放入 <style> 标签中。
-                  完成后必须以 /END/ 结尾。
                   正确示例输出：
                   h1 { color: red; }
                   .markdown-print-body { font-size: 16px; }
-                  /END/
+                  /'  
+                  /nothink
   `,
       },
-      { role: "user", content: prompt },
+      { role: "user", content: prompt + '/nothink' },
     ];
 
     console.log(`用户: ${prompt}`);
@@ -46,10 +46,11 @@ async function aiGenCSS(prompt: string) {
       stop: ["/END/"],
       temperature: 0.2,
       presence_penalty: 1,
+      enable_thinking: false,
     });
 
     let content = reply.choices[0].message.content || "";
-    console.log(`AI: ${content}`);
+    console.log(`AI: `,reply);
 
     // 清理可能的代码块包裹
     const cssRegCodeFrameRegex = /```(?:css|)\n?([\s\S]*?)(?:```|$)/i;
@@ -59,7 +60,8 @@ async function aiGenCSS(prompt: string) {
     }
 
     // 移除结束标志
-    content = content.replace(/\/END\/$/, "").trim();
+    content = content.replace(`<think>`, "").trim();
+    content = content.replace(`</think>`, "").trim();
 
     return content;
   } catch (error) {

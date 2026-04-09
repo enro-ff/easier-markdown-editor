@@ -5,7 +5,6 @@ import { PictureOutlined } from "@ant-design/icons";
 import useIndexedDB from "../../../../hooks/useIndexedDB";
 import createFolderStore from "../../../../utils/folderStore";
 import type { TreeNode } from "../../../../utils/buildDataTree";
-import md2pdf from '../../../../hooks/useMd2pdf'
 import GenPDF from "../GenPDF/GenPDF";
 
 import "./ImageFolder.css";
@@ -71,10 +70,7 @@ const ImageFolder = ( props :  ImageFolderProps) => {
         >
           图片文件夹
         </Button>
-        {/* <Button onClick={() => md2pdf({view: props.codemirrorViewRef.current!, getImageUrl: async (url) => folderStore.createLocalURLByImageURL(url)})}>
-          导出为pdf
-        </Button> */}
-        <GenPDF viewRef={props.codemirrorViewRef} />
+        <GenPDF viewRef={props.codemirrorViewRef} getImageUrl={async (url) => folderStore.createLocalURLByImageURL(url)} />
         <Modal
           title="图片文件夹"
           open={folderOpen}
@@ -134,7 +130,6 @@ const ImageFolder = ( props :  ImageFolderProps) => {
                   if (folderSelected) {
                     const currentName = String(folderSelected.title || "");
                     setNameInput(currentName);
-                    console.log(currentName);
                     setNameModalOpen(true);
                   }
                 }}
