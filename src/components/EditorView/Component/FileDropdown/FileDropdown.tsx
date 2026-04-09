@@ -9,6 +9,7 @@ import { DownOutlined } from "@ant-design/icons";
 import { Dropdown, Space } from "antd";
 import { useMenuItem } from "./hooks/useMenuItem";
 import ImageFolder from "./Component/ImageFolder/ImageFolder";
+import aiGenCss from '../../utils/aiGenCSS'
 
 import "./FileDropdown.css";
 interface FileDropDownProps {
@@ -86,6 +87,7 @@ const FileDropDown: React.FC<FileDropDownProps> = ({
           <button onClick={getPerimisson}>授权</button>
         )}
       </p>
+      <button onClick={() => aiGenCss()}>AI生成CSS</button>
     </>
   );
 };

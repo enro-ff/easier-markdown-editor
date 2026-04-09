@@ -66,7 +66,7 @@ function createHtmlNode(name: string): HTMLElement | null {
   }
 }
 
-async function parseCmToHtml(props: props) {
+export async function parseCmToHtml(props: props) {
   const { view, getImageUrl } = props;
 
   async function buildHtml(
@@ -104,7 +104,6 @@ async function parseCmToHtml(props: props) {
         let src = doc.sliceString(urlNode.from, urlNode.to);
         if (src.startsWith("./") || src.startsWith("../")) {
           src = (await getImageUrl(src)) || ""; // 如果 getImageUrl 返回 undefined，就使用原始 src
-          console.log("相对路径图片，尝试转换为绝对路径:", src);
         }
         (currentEl as HTMLImageElement).src = src;
       }
@@ -179,13 +178,18 @@ async function parseCmToHtml(props: props) {
   return root;
 }
 
-export function printHtmlToPdf(htmlElement: HTMLElement, title = "Document") {
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "absolute";
-  iframe.style.width = "0px";
-  iframe.style.height = "0px";
-  iframe.style.border = "none";
-  document.body.appendChild(iframe);
+export function printHtmlToPdf(htmlElement: HTMLElement, title = "Document", targetIframe?: HTMLIFrameElement) {
+  let iframe = targetIframe;
+  let isNewIframe = false;
+  if (!iframe) {
+    iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.width = "0px";
+    iframe.style.height = "0px";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+    isNewIframe = true;
+  }
 
   const iframeDoc = iframe.contentWindow?.document;
   if (!iframeDoc) return;
@@ -197,19 +201,57 @@ export function printHtmlToPdf(htmlElement: HTMLElement, title = "Document") {
       <head>
         <title>${title}</title>
         <style>
+          /* 通用样式 */
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0;
+            padding: 0;
+          }
+          h1, h2, h3 { color: #111; page-break-after: avoid; }
+          pre { background: #f5f5f5; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+          code { font-family: Consolas, Monaco, "Courier New", monospace; background: #f0f0f0; padding: 2px 4px; border-radius: 3px; }
+          pre code { background: none; padding: 0; }
+          blockquote { border-left: 4px solid #ddd; margin-left: 0; padding-left: 1em; color: #666; }
+          a { color: #0366d6; text-decoration: none; }
+          a:hover { text-decoration: underline; }
+          img { max-width: 100%; height: auto; border-radius: 4px; display: block; margin: 10px 0; }
+
+          /* A4 纸张模拟 */
+          .markdown-print-body {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 0 auto;
+            background: white;
+            box-sizing: border-box;
+          }
+
+          @media screen {
+            body { 
+              background: #f0f2f5; 
+              padding: 20px 0;
+            }
+            .markdown-print-body {
+              box-shadow: 0 0 10px rgba(0,0,0,0.1);
+              border: 1px solid #ddd;
+            }
+          }
+
           @media print {
-            @page { margin: 20mm; }
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; }
-            h1, h2, h3 { color: #111; page-break-after: avoid; }
-            pre { background: #f5f5f5; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
-            code { font-family: Consolas, Monaco, "Courier New", monospace; background: #f0f0f0; padding: 2px 4px; border-radius: 3px; }
-            pre code { background: none; padding: 0; }
-            blockquote { border-left: 4px solid #ddd; margin-left: 0; padding-left: 1em; color: #666; }
-            
-            /* 新增链接和图片打印样式 */
-            a { color: #0366d6; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-            img { max-width: 100%; height: auto; border-radius: 4px; display: block; margin: 10px 0; }
+            @page { 
+              size: A4; 
+              margin: 0; 
+            }
+            body { 
+              background: white; 
+            }
+            .markdown-print-body {
+              margin: 0;
+              box-shadow: none;
+              border: none;
+            }
           }
         </style>
       </head>
@@ -221,14 +263,16 @@ export function printHtmlToPdf(htmlElement: HTMLElement, title = "Document") {
   iframeDoc.close();
 
   // 等待图片等资源加载完毕再打印，避免图片在 PDF 中空白
-  setTimeout(() => {
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-
+  if (isNewIframe) {
     setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 1000);
-  }, 500); // 给 500ms 缓冲时间让图片请求发出并渲染
+      iframe!.contentWindow?.focus();
+      iframe!.contentWindow?.print();
+
+      setTimeout(() => {
+        document.body.removeChild(iframe!);
+      }, 1000);
+    }, 500); // 给 500ms 缓冲时间让图片请求发出并渲染
+  }
 }
 
 export default async function printEditorAsPdf(props: props) {
