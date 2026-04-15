@@ -152,7 +152,7 @@ const ImageFolder = ( props :  ImageFolderProps) => {
           onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
             if (!e.target.files || !fileInputRef.current || !folderSelected)
               return;
-
+            console.log(e.target.files[0]);
             await folderStore.uploadImage(
               e.target.files[0],
               folderSelected.raw.id,

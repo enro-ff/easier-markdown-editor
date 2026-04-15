@@ -50,12 +50,12 @@ export class ImagefolderStore {
 
   //生成分片的唯一id
   private createChunkedId = (imageId: number, index: number) => {
-    return imageId * 1000 + index;
+       return imageId + index;
   }
 
   private async storeChunks(chunksMeta: StoredChunkMeta[]) {
     for (const meta of chunksMeta) {
-      await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').add(meta))
+      await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').put(meta))
     }
   }
   //查询父文件夹url
@@ -144,7 +144,9 @@ export class ImagefolderStore {
 
   //上传图片或者文件夹
   async uploadImage(file: File, parentId: number) {
+    console.log(Date.now(), 'uploadImage')
     const url = await this.createUrlByParentId(parentId, file.name);
+    const type = file.type || "image/jpeg"
     const chunkCount = Math.ceil(file.size / chunkSize);
     const imageBlob = file.slice()
     const imageMeta: StoredImageMeta = {
@@ -154,7 +156,7 @@ export class ImagefolderStore {
       parentId,
       url,
       chunkCount,
-      mimeType: imageBlob.type,
+      mimeType: type,
     }
     const chunksMeta: StoredChunkMeta[] = [];
     for (let i = 0; i < chunkCount; i++) {
@@ -167,10 +169,11 @@ export class ImagefolderStore {
     }
     await this.storeChunks(chunksMeta);
     await request2Promise(this.db.transaction(["folders"], 'readwrite').objectStore('folders').add(imageMeta))
-  }
-
+    console.log(Date.now(), 'uploadImage success')
+}
   //根据url制作本地url
   createLocalURLByImageURL = async (url: string) => {
+    try{
     await this.ensureReady()
     if (!this.db) return url;
     if (this.urlMap.has(url)) return this.urlMap.get(url);
@@ -179,16 +182,25 @@ export class ImagefolderStore {
     const imageMeta = Files.find((a) => a.type === 'image') as StoredImageMeta;
     if (!imageMeta) return url || "";
     const { id, mimeType } = imageMeta;
+    console.log(id, mimeType)
     const blobs: Blob[] = []
-    const chunks = await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').index('imageId').getAll(id)) as StoredChunkMeta[]
+    const chunks = await request2Promise(this.db.transaction(['chunks'], 'readonly').objectStore('chunks').index('imageId').getAll(id)) as StoredChunkMeta[]
+    console.log(chunks)
     chunks.sort((a, b) => a.index - b.index)
+    console.log(chunks)
     for (let c of chunks) {
       blobs.push(c.data)
     }
+    console.log(blobs)
     const imageBlob = new Blob(blobs, { type: mimeType })
+    console.log(imageBlob)
     const newURL = URL.createObjectURL(imageBlob) || "";
     this.urlMap.set(url, newURL);
     return newURL
+  }catch(error){
+    console.error(error);
+    return url || "";
+  }
   }
 
   //释放本地url
