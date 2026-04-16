@@ -9,7 +9,6 @@ import { DownOutlined } from "@ant-design/icons";
 import { Dropdown, Space } from "antd";
 import { useMenuItem } from "./hooks/useMenuItem";
 import ImageFolder from "./Component/ImageFolder/ImageFolder";
-import aiGenCss from '../../utils/aiGenCSS'
 
 import "./FileDropdown.css";
 interface FileDropDownProps {

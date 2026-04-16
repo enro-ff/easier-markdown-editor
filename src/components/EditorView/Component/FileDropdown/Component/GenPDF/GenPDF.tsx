@@ -6,7 +6,7 @@ import aiGenCSS from '../../../../utils/aiGenCSS'
 
 interface GenPDFProps {
   viewRef: RefObject<EditorView | null>;
-  getImageUrl: (url: string) => Promise<string | undefined>;
+  getImageUrl:  (url: string) => Promise<string | Blob| undefined>;
 }
 const GenPDF = (props: GenPDFProps) => {
   const { viewRef, getImageUrl } = props;

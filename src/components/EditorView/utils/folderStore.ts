@@ -173,7 +173,6 @@ export class ImagefolderStore {
 }
   //根据url制作本地url
   createLocalURLByImageURL = async (url: string) => {
-    try{
     await this.ensureReady()
     if (!this.db) return url;
     if (this.urlMap.has(url)) return this.urlMap.get(url);
@@ -192,15 +191,16 @@ export class ImagefolderStore {
       blobs.push(c.data)
     }
     console.log(blobs)
+    
     const imageBlob = new Blob(blobs, { type: mimeType })
+    if(imageBlob.size > 50*1024*1024) {
+      return imageBlob
+    }
     console.log(imageBlob)
     const newURL = URL.createObjectURL(imageBlob) || "";
     this.urlMap.set(url, newURL);
     return newURL
-  }catch(error){
-    console.error(error);
-    return url || "";
-  }
+
   }
 
   //释放本地url

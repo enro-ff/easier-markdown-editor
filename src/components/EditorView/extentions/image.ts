@@ -38,7 +38,7 @@ class ImageWidget extends WidgetType {
   toDOM() {
     const img = document.createElement("img");
     if (!this.src.startsWith('http:') && !this.src.startsWith('https:')) {
-      folderStore.createLocalURLByImageURL(this.src).then(url => img.src = url || this.src)
+      folderStore.createLocalURLByImageURL(this.src).then(url => img.src = typeof url === "string" ? url : this.src)
     } else {
       img.src = this.src;
     }

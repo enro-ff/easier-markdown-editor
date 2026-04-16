@@ -6,6 +6,7 @@ import useIndexedDB from "../../../../hooks/useIndexedDB";
 import createFolderStore from "../../../../utils/folderStore";
 import type { TreeNode } from "../../../../utils/buildDataTree";
 import GenPDF from "../GenPDF/GenPDF";
+import OpenSeadragonViewer from "./OpenSeadragonViewer";
 
 import "./ImageFolder.css";
 
@@ -22,14 +23,16 @@ const ImageFolder = ( props :  ImageFolderProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [nameInput, setNameInput] = useState<string>("");
-  const [previewImageSrc, setPreviewImageSrc] = useState<string>("");
+  const [previewImageSrc, setPreviewImageSrc] = useState<string | Blob>("");
 
   useEffect(() => {
     if (folderSelected?.raw?.type === "image") {
       const url = folderSelected.raw.url;
       if (!url.startsWith("http") && !url.startsWith("https")) {
         folderStore.createLocalURLByImageURL(url).then((localURL) => {
-          setPreviewImageSrc(localURL || "");
+          if (localURL) {
+            setPreviewImageSrc(localURL);
+          }
         });
       } else {
         setPreviewImageSrc(url);
@@ -70,7 +73,7 @@ const ImageFolder = ( props :  ImageFolderProps) => {
         >
           图片文件夹
         </Button>
-        <GenPDF viewRef={props.codemirrorViewRef} getImageUrl={async (url) => folderStore.createLocalURLByImageURL(url)} />
+        <GenPDF viewRef={props.codemirrorViewRef} getImageUrl={async (url : string) => await folderStore.createLocalURLByImageURL(url)} />
         <Modal
           title="图片文件夹"
           open={folderOpen}
@@ -140,8 +143,30 @@ const ImageFolder = ( props :  ImageFolderProps) => {
               <Button onClick={openFolderPicker}>上传文件夹</Button>
             </div>
             <div>
-              <div>图片预览</div>
-              {previewImageSrc && <img src={previewImageSrc} />}
+              <div style={{ marginBottom: "8px", fontWeight: "bold" }}>图片预览</div>
+              <div style={{ 
+                height: "calc(90vh - 120px)", 
+                border: "1px solid #d9d9d9", 
+                borderRadius: "8px", 
+                background: "#f5f5f5", 
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column"
+              }}>
+                {previewImageSrc ? (
+                  <OpenSeadragonViewer src={previewImageSrc} />
+                ) : (
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "center", 
+                    alignItems: "center", 
+                    height: "100%", 
+                    color: "#999" 
+                  }}>
+                    请选择图片以预览
+                  </div>
+                )}
+              </div>
             </div>
           </Splitter>
         </Modal>

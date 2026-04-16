@@ -46,7 +46,6 @@ async function aiGenCSS(prompt: string) {
       stop: ["/END/"],
       temperature: 0.2,
       presence_penalty: 1,
-      enable_thinking: false,
     });
 
     let content = reply.choices[0].message.content || "";

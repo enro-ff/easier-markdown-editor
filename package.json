@@ -22,14 +22,17 @@
     "antd": "^6.2.0",
     "dompdf.js": "^1.2.0",
     "lezer": "^0.13.5",
+    "openseadragon": "^6.0.2",
     "purrmd": "^0.1.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "uiw": "^4.6.13"
+    "uiw": "^4.6.13",
+    "wasm-vips": "^0.0.17"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
+    "@types/openseadragon": "^5.0.2",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@types/wicg-file-system-access": "^2023.10.7",

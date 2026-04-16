@@ -103,7 +103,13 @@ export async function parseCmToHtml(props: props) {
       if (urlNode) {
         let src = doc.sliceString(urlNode.from, urlNode.to);
         if (src.startsWith("./") || src.startsWith("../")) {
-          src = (await getImageUrl(src)) || ""; // 如果 getImageUrl 返回 undefined，就使用原始 src
+          const resolved = await getImageUrl(src);
+          if (typeof resolved === "string") {
+            src = resolved;
+          } else if (resolved instanceof Blob) {
+            src = URL.createObjectURL(resolved);
+          }
+          // 如果返回 undefined，保留原始 src
         }
         (currentEl as HTMLImageElement).src = src;
       }
@@ -282,5 +288,5 @@ export default async function printEditorAsPdf(props: props) {
 
 interface props {
   view: EditorView;
-  getImageUrl: (url: string) => Promise<string | undefined>;
+  getImageUrl: (url: string) => Promise<string | Blob| undefined>;
 }
