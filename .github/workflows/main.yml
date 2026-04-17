@@ -29,6 +29,6 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}       # 服务器 IP
           username: ${{ secrets.SERVER_USER }}   # 服务器用户名（root 或 ubuntu）
           key: ${{ secrets.SERVER_SSH_KEY }}     # 服务器私钥
-          # 上传目录：dist 是打包目录 /var/www/xxx 是服务器网站目录
+          # 上传目录：dist 是打包目录 /var/www/website 是服务器网站目录
           script: |
-            rsync -avz --delete ./dist/ root@${{ secrets.SERVER_HOST }}:/var/www/你的网站目录/
+            rsync -avz --delete ./dist/ root@${{ secrets.SERVER_HOST }}:/var/www/website/
