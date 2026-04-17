@@ -48,6 +48,8 @@ async function aiGenCSS(prompt: string) {
       presence_penalty: 1,
     });
 
+    engineInstance.unload();
+
     let content = reply.choices[0].message.content || "";
     console.log(`AI: `,reply);
 
