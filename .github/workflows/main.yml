@@ -20,12 +20,13 @@ jobs:
       # 上传文件到服务器
       - name: 部署到远程服务器
         uses: appleboy/ssh-action@master
-        timeout: 600s
+        
         with:
           # ========== 必须修改这 4 个参数 ==========
           host: ${{ secrets.SERVER_HOST }}       # 服务器 IP
           username: ${{ secrets.SERVER_USER }}   # 服务器用户名（root 或 ubuntu）
           password: ${{ secrets.SERVER_PASSWORD }} # 改用密码
+          timeout: 600s
           # 上传目录：dist 是打包目录 /var/www/website 是服务器网站目录
           script: |
-            rsync -avz --delete ./ root@${{ secrets.SERVER_HOST }}:/var/www/website/
+            rsync -avz --delete ./root@${{ secrets.SERVER_HOST }}:/var/www/website/
