@@ -12,10 +12,6 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      # ==============================================
-      # 如果是纯静态网页（HTML/CSS/JS），删除下面这段
-      # 如果是 Vue / React / Nuxt 等，保留并修改
-      # ==============================================
       - name: 安装依赖并打包
         run: |
           npm install
@@ -23,7 +19,8 @@ jobs:
           
       # 上传文件到服务器
       - name: 部署到远程服务器
-        uses: cross-the-world/ssh-scp-deploy@master
+        uses: appleboy/ssh-action@master
+        timeout: 600s
         with:
           # ========== 必须修改这 4 个参数 ==========
           host: ${{ secrets.SERVER_HOST }}       # 服务器 IP
@@ -31,4 +28,4 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }} # 改用密码
           # 上传目录：dist 是打包目录 /var/www/website 是服务器网站目录
           script: |
-            rsync -avz --delete ./dist/ root@${{ secrets.SERVER_HOST }}:/var/www/website/
+            rsync -avz --delete ./ root@${{ secrets.SERVER_HOST }}:/var/www/website/
