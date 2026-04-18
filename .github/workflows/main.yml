@@ -23,8 +23,8 @@ jobs:
         
         with:
           # ========== 必须修改这 4 个参数 ==========
-          host: ${{ secrets.SERVER_HOST }}       # 服务器 IP
-          username: ${{ secrets.SERVER_USER }}   # 服务器用户名（root 或 ubuntu）
+          host: 47.104.134.150      # 服务器 IP
+          username: root # 服务器用户名（root 或 ubuntu）
           password: ${{ secrets.SERVER_PASSWORD }} # 改用密码
           timeout: 600s
           # 上传目录：dist 是打包目录 /var/www/website 是服务器网站目录
