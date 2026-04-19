@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 playwright-report/
+.gemini/
 
 # Editor directories and files
 .vscode/*
