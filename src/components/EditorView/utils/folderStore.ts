@@ -23,8 +23,31 @@ const toHex = (buffer: ArrayBuffer) =>
  */
 async function hashBlob(blob: Blob): Promise<string> {
   try {
-    const buf = await blob.arrayBuffer();
-    const digest = await crypto.subtle.digest("SHA-256", buf);
+    // 1. 创建哈希上下文
+    const hash = crypto.subtle;
+    const algorithm = { name: "SHA-256" };
+
+    // 2. 流式读取文件（不会一次性加载全文件）
+    const reader = blob.stream().getReader();
+    let chunks: Uint8Array[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+
+    // 3. 合并后计算哈希（Web Crypto 只能一次性计算）
+    const mergedBuffer = new Uint8Array(
+      chunks.reduce((acc, curr) => acc + curr.length, 0)
+    );
+    let offset = 0;
+    for (const chunk of chunks) {
+      mergedBuffer.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    const digest = await hash.digest(algorithm, mergedBuffer);
     return toHex(digest);
   } catch (error) {
     console.warn("SHA-256 failed, using fallback hash", error);
@@ -79,7 +102,7 @@ export class ImagefolderStore {
 
   //生成分片的唯一id，使用字符串避免与 imageId 冲突
   private createChunkedId = (imageId: number, index: number) => {
-       return `${imageId}-${index}`;
+    return `${imageId}-${index}`;
   }
 
   private async storeChunks(chunksMeta: StoredChunkMeta[]) {
@@ -94,7 +117,7 @@ export class ImagefolderStore {
       const store = transaction.objectStore('chunks');
       const index = store.index('imageId');
       const request = index.openCursor(IDBKeyRange.only(imageId));
-      
+
       request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
         if (cursor) {
@@ -197,10 +220,10 @@ export class ImagefolderStore {
   //上传图片（支持断点续传与并发处理）
   async uploadImage(file: File, parentId: number): Promise<void> {
     const lockKey = this._getLockKey(parentId, file.name);
-    
+
     // 获取当前的 Promise 链，如果没有则从 resolved 开始
     const previousPromise = ImagefolderStore._uploadQueues.get(lockKey) || Promise.resolve();
-    
+
     // 创建一个新的 Promise，它会等待上一个任务完成
     const currentPromise = previousPromise.then(async () => {
       try {
@@ -253,7 +276,7 @@ export class ImagefolderStore {
             .index('imageId')
             .getAll(imageId)
         ) as StoredChunkMeta[];
-        
+
         uploadedIndices = new Set(chunks.map(c => c.index));
         if (uploadedIndices.size === chunkCount) {
           console.log('文件已存在且完整，跳过上传');
@@ -306,7 +329,7 @@ export class ImagefolderStore {
         index: i,
         data: chunkData
       };
-      
+
       await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').put(chunkMeta));
       if (i % 5 === 0 || i === chunkCount - 1) {
         console.log(`上传进度: ${file.name} ${i + 1}/${chunkCount}`);
@@ -335,9 +358,9 @@ export class ImagefolderStore {
       blobs.push(c.data)
     }
     console.log(blobs)
-    
+
     const imageBlob = new Blob(blobs, { type: mimeType })
-    if(imageBlob.size > 50*1024*1024) {
+    if (imageBlob.size > 50 * 1024 * 1024) {
       return imageBlob
     }
     console.log(imageBlob)

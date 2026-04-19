@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Button, Modal, Space, Tree, Input, Splitter } from "antd";
+import { useState, useRef, useEffect, useActionState, Suspense } from "react";
+import { Button, Modal, Space, Tree, Input, Splitter, message, Spin } from "antd";
 import type { EditorView } from "@codemirror/view";
 import { PictureOutlined } from "@ant-design/icons";
 import useIndexedDB from "../../../../hooks/useIndexedDB";
@@ -14,7 +14,7 @@ interface ImageFolderProps {
   codemirrorViewRef: React.RefObject<EditorView | null>;
 }
 
-const ImageFolder = ( props :  ImageFolderProps) => {
+const ImageFolder = (props: ImageFolderProps) => {
   const folderStore = createFolderStore(useIndexedDB());
   const [folderOpen, setFolderOpen] = useState<boolean>(false);
   const [folderSelected, setFolderSelected] = useState<TreeNode | null>(null);
@@ -24,6 +24,22 @@ const ImageFolder = ( props :  ImageFolderProps) => {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [nameInput, setNameInput] = useState<string>("");
   const [previewImageSrc, setPreviewImageSrc] = useState<string | Blob>("");
+
+  const [, createFolderAction, isPending] = useActionState(async () => {
+    try {
+      await folderStore.createFolderByParentId(
+        folderSelected?.raw?.id || 1,
+        nameInput,
+      );
+      await generateTreeData();
+      setNameModalOpen(false);
+      setNameInput("");
+      return { success: true };
+    } catch (e) {
+      message.error("创建文件夹失败");
+      return { success: false, error: e };
+    }
+  }, { success: false });
 
   useEffect(() => {
     if (folderSelected?.raw?.type === "image") {
@@ -73,7 +89,7 @@ const ImageFolder = ( props :  ImageFolderProps) => {
         >
           图片文件夹
         </Button>
-        <GenPDF viewRef={props.codemirrorViewRef} getImageUrl={async (url : string) => await folderStore.createLocalURLByImageURL(url)} />
+        <GenPDF viewRef={props.codemirrorViewRef} getImageUrl={async (url: string) => await folderStore.createLocalURLByImageURL(url)} />
         <Modal
           title="图片文件夹"
           open={folderOpen}
@@ -103,14 +119,8 @@ const ImageFolder = ( props :  ImageFolderProps) => {
                 title="新建文件夹"
                 open={nameModalOpen}
                 onCancel={() => setNameModalOpen(false)}
-                onOk={async () => {
-                  await folderStore.createFolderByParentId(
-                    folderSelected?.raw?.id || 1,
-                    nameInput,
-                  );
-                  generateTreeData();
-                  setNameModalOpen(false);
-                }}
+                onOk={createFolderAction}
+                confirmLoading={isPending}
                 width="30vw"
               >
                 <Input
@@ -144,24 +154,35 @@ const ImageFolder = ( props :  ImageFolderProps) => {
             </div>
             <div>
               <div style={{ marginBottom: "8px", fontWeight: "bold" }}>图片预览</div>
-              <div style={{ 
-                height: "calc(90vh - 120px)", 
-                border: "1px solid #d9d9d9", 
-                borderRadius: "8px", 
-                background: "#f5f5f5", 
+              <div style={{
+                height: "calc(90vh - 120px)",
+                border: "1px solid #d9d9d9",
+                borderRadius: "8px",
+                background: "#f5f5f5",
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column"
               }}>
                 {previewImageSrc ? (
-                  <OpenSeadragonViewer src={previewImageSrc} />
+                  <Suspense fallback={
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      height: "100%"
+                    }}>
+                      <Spin tip="正在加载图片..." />
+                    </div>
+                  }>
+                    <OpenSeadragonViewer src={previewImageSrc} />
+                  </Suspense>
                 ) : (
-                  <div style={{ 
-                    display: "flex", 
-                    justifyContent: "center", 
-                    alignItems: "center", 
-                    height: "100%", 
-                    color: "#999" 
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    height: "100%",
+                    color: "#999"
                   }}>
                     请选择图片以预览
                   </div>

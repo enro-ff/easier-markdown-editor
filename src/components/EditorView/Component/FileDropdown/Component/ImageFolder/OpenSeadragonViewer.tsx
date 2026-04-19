@@ -1,14 +1,29 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, use } from "react";
 import OpenSeadragon from "openseadragon";
 
 interface OpenSeadragonViewerProps {
   src: string | Blob;
 }
 
+// 缓存 ImageBitmap Promise 以确保 use() 的稳定性
+const bitmapPromiseCache = new WeakMap<Blob, Promise<ImageBitmap>>();
+
+function getBitmapPromise(blob: Blob) {
+  let promise = bitmapPromiseCache.get(blob);
+  if (!promise) {
+    promise = createImageBitmap(blob);
+    bitmapPromiseCache.set(blob, promise);
+  }
+  return promise;
+}
+
 const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
   const viewerRef = useRef<HTMLDivElement>(null);
   const osdRef = useRef<OpenSeadragon.Viewer | null>(null);
   const imageBitmapRef = useRef<ImageBitmap | null>(null);
+
+  // 如果 src 是 Blob，使用 use() 钩子解析 ImageBitmap
+  const resolvedBitmap = src instanceof Blob ? use(getBitmapPromise(src)) : null;
 
   useEffect(() => {
     const initViewer = async () => {
@@ -19,29 +34,23 @@ const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
         osdRef.current.destroy();
         osdRef.current = null;
       }
-      if (imageBitmapRef.current) {
-        imageBitmapRef.current.close();
-        imageBitmapRef.current = null;
-      }
+
+      // 注意：这里不再手动关闭 imageBitmapRef.current，
+      // 因为它现在由 use() 管理或作为局部变量。
+      // 但为了 OpenSeadragon 的自定义加载器，我们仍需要引用它。
+      imageBitmapRef.current = resolvedBitmap;
 
       let tileSource: any;
 
       if (src instanceof Blob) {
-        // 处理大图 Blob
-        try {
-          const bitmap = await createImageBitmap(src);
-          imageBitmapRef.current = bitmap;
+        if (!resolvedBitmap) return;
 
-          tileSource = {
-            width: bitmap.width,
-            height: bitmap.height,
-            tileSize: 256, // 瓦片大小
-            getTileUrl: () => "", // 不需要 URL
-          };
-        } catch (e) {
-          console.error("Failed to create ImageBitmap from blob", e);
-          return;
-        }
+        tileSource = {
+          width: resolvedBitmap.width,
+          height: resolvedBitmap.height,
+          tileSize: 256, // 瓦片大小
+          getTileUrl: () => "", // 不需要 URL
+        };
       } else {
         // 处理普通 URL
         tileSource = {
@@ -74,9 +83,7 @@ const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
       osdRef.current = viewer;
 
       // 如果是 Blob 模式，设置自定义瓦片加载器
-      if (src instanceof Blob && imageBitmapRef.current) {
-        const bitmap = imageBitmapRef.current;
-        
+      if (src instanceof Blob && resolvedBitmap) {
         viewer.addHandler("open", () => {
           const tiledImage = viewer.world.getItemAt(0);
           if (tiledImage) {
@@ -89,7 +96,7 @@ const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
               const ctx = canvas.getContext("2d");
               if (ctx) {
                 ctx.drawImage(
-                  bitmap,
+                  resolvedBitmap,
                   tile.sourceBounds.x,
                   tile.sourceBounds.y,
                   tile.sourceBounds.width,
@@ -114,12 +121,12 @@ const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
         osdRef.current.destroy();
         osdRef.current = null;
       }
-      if (imageBitmapRef.current) {
-        imageBitmapRef.current.close();
-        imageBitmapRef.current = null;
-      }
+      // 注意：resolvedBitmap 的生命周期由 React 管理，
+      // 但如果 OpenSeadragon 销毁了，我们可能需要清理。
+      // 不过 ImageBitmap 通常在不再被引用时会被垃圾回收，
+      // 或者在下一次 use() 之前保持。
     };
-  }, [src]);
+  }, [src, resolvedBitmap]);
 
   return (
     <div
