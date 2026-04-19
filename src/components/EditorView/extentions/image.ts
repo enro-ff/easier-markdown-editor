@@ -11,8 +11,6 @@ import {
 
 import type { FormattingDisplayMode } from "purrmd";
 import { findNodeURL, isSelectRange, isFocusEventState, isForceUpdateEventState } from "./utils";
-import useIndexedDB from "../hooks/useIndexedDB";
-import { createImageStore } from "../utils/imageStore";
 import createFolderStore from "../utils/folderStore";
 import { ImagefolderStore } from "../utils/folderStore";
 
@@ -20,8 +18,6 @@ export const imageClass = {
   image: "purrmd-cm-image",
 };
 
-const sharedStore = createImageStore(useIndexedDB());
-const DB_PROTOCOL = "db://";
 let folderStore: ImagefolderStore;
 
 class ImageWidget extends WidgetType {
@@ -58,9 +54,6 @@ class ImageWidget extends WidgetType {
   }
 
   destroy(dom: HTMLElement) {
-    if (this.src.startsWith(DB_PROTOCOL)) {
-      sharedStore.revokeObjectURL(this.src.replace(DB_PROTOCOL, ""));
-    }
     super.destroy(dom);
   }
 }
