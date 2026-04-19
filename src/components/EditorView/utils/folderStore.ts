@@ -10,6 +10,34 @@ const request2Promise = <T>(request: IDBRequest<T>) => {
   });
 }
 
+/**
+ * 将 ArrayBuffer 转换为十六进制字符串
+ */
+const toHex = (buffer: ArrayBuffer) =>
+  Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+/**
+ * 计算 Blob 的哈希值
+ */
+async function hashBlob(blob: Blob): Promise<string> {
+  try {
+    const buf = await blob.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return toHex(digest);
+  } catch (error) {
+    console.warn("SHA-256 failed, using fallback hash", error);
+    const text = await blob.text();
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      hash = (hash << 5) - hash + text.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(16);
+  }
+}
+
 export class ImagefolderStore {
   private db!: IDBDatabase;
   private idx: number = 0;
@@ -48,9 +76,9 @@ export class ImagefolderStore {
     return this.formatUrl(parentUrl + '/' + name);
   }
 
-  //生成分片的唯一id
+  //生成分片的唯一id，使用字符串避免与 imageId 冲突
   private createChunkedId = (imageId: number, index: number) => {
-       return imageId + index;
+       return `${imageId}-${index}`;
   }
 
   private async storeChunks(chunksMeta: StoredChunkMeta[]) {
@@ -58,6 +86,27 @@ export class ImagefolderStore {
       await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').put(meta))
     }
   }
+
+  private async deleteChunksByImageId(imageId: number) {
+    return new Promise<void>((resolve, reject) => {
+      const transaction = this.db.transaction(['chunks'], 'readwrite');
+      const store = transaction.objectStore('chunks');
+      const index = store.index('imageId');
+      const request = index.openCursor(IDBKeyRange.only(imageId));
+      
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        } else {
+          resolve();
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   //查询父文件夹url
   async queryParentFolderUrl(folderUrl: string) {
     const parentUrl = this.formatUrl(folderUrl).split("/").slice(0, -1).join("/");
@@ -66,6 +115,7 @@ export class ImagefolderStore {
 
   //获取所有文件夹
   async queryAllFolders() {
+    await this.ensureReady();
     const store = this.db.transaction(["folders"], "readonly").objectStore("folders");
     const request = store.getAll();
     const result = await request2Promise(request);
@@ -77,6 +127,7 @@ export class ImagefolderStore {
 
   //根据文件夹id获取文件夹元数据
   async getFileById(id: number) {
+    await this.ensureReady();
     const store = this.db.transaction(["folders"], "readonly").objectStore("folders");
     const request = store.get(id);
     const result = await request2Promise(request);
@@ -85,6 +136,7 @@ export class ImagefolderStore {
 
   //根据父文件夹id创建文件夹
   async createFolderByParentId(parentId: number, name: string) {
+    await this.ensureReady();
     const parentMeta = await this.getFileById(parentId);
     const url = parentMeta!.url + "/" + name;
     const folderMeta: StoredFolderMeta = {
@@ -101,23 +153,18 @@ export class ImagefolderStore {
 
   //根据文件夹id获取所有子文件夹
   async getSubFolderById(id: number) {
+    await this.ensureReady();
     const result = await request2Promise(this.db.transaction(["folders"], "readonly").objectStore("folders").index("parentId").getAll(id)) as StoredMetaBase[];
     return result || [];
   }
 
   //删除文件夹及所有子文件夹和文件
   async deleteFileById(id: number) {
+    await this.ensureReady();
     const meta = await this.getFileById(id);
     if (meta === undefined) return;
     if (meta.type === "image") {
-      this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').index('imageId').openCursor(IDBKeyRange.only(id)).onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-        if (cursor) {
-          cursor.delete();
-          cursor.continue();
-        }
-      };
-
+      await this.deleteChunksByImageId(id);
     }
     const store = this.db.transaction(["folders"], "readwrite").objectStore("folders");
     await request2Promise(store.delete(id));
@@ -126,51 +173,105 @@ export class ImagefolderStore {
       if (subFolderList.length === 0) {
         return;
       }
-      subFolderList.forEach(async (subFolder) => {
+      for (const subFolder of subFolderList) {
         await this.deleteFileById(subFolder.id);
-      })
-      const store = this.db.transaction(["folders"], "readwrite").objectStore("folders");
-      await request2Promise(store.delete(id));
+      }
     }
   }
 
   //更改文件夹命名
   async changeFolderNameById(id: number, name: string) {
+    await this.ensureReady();
     const folderMeta = await this.getFileById(id);
-    folderMeta!.name = name;
+    if (!folderMeta) return;
+    folderMeta.name = name;
     const store = this.db.transaction(["folders"], "readwrite").objectStore("folders");
     await request2Promise(store.put(folderMeta));
   }
 
-  //上传图片或者文件夹
+  //上传图片（支持断点续传）
   async uploadImage(file: File, parentId: number) {
-    console.log(Date.now(), 'uploadImage')
+    await this.ensureReady();
+    console.log(Date.now(), 'uploadImage start', file.name);
+    
     const url = await this.createUrlByParentId(parentId, file.name);
-    const type = file.type || "image/jpeg"
+    const hash = await hashBlob(file);
+    const type = file.type || "image/jpeg";
     const chunkCount = Math.ceil(file.size / chunkSize);
-    const imageBlob = file.slice()
-    const imageMeta: StoredImageMeta = {
-      id: this.createFileId(),
-      type: "image",
-      name: file.name,
-      parentId,
-      url,
-      chunkCount,
-      mimeType: type,
+
+    // 1. 查找现有元数据
+    const folderStore = this.db.transaction(["folders"], "readonly").objectStore("folders");
+    const existing = await request2Promise(folderStore.index("url").get(url)) as StoredImageMeta | undefined;
+
+    let imageId: number;
+    let uploadedIndices = new Set<number>();
+
+    if (existing && existing.type === "image") {
+      imageId = existing.id;
+      if (existing.hash === hash) {
+        // 哈希匹配，检查已存在的分片
+        const chunks = await request2Promise(
+          this.db.transaction(['chunks'], 'readonly')
+            .objectStore('chunks')
+            .index('imageId')
+            .getAll(imageId)
+        ) as StoredChunkMeta[];
+        
+        uploadedIndices = new Set(chunks.map(c => c.index));
+        if (uploadedIndices.size === chunkCount) {
+          console.log('文件已存在且完整，跳过上传');
+          return;
+        }
+        console.log(`发现部分上传文件，已完成 ${uploadedIndices.size}/${chunkCount} 分片`);
+      } else {
+        // 哈希不匹配，说明文件内容变了，删除旧分片并更新元数据
+        console.log('文件内容已更改，重新开始上传');
+        await this.deleteChunksByImageId(imageId);
+        uploadedIndices.clear();
+        existing.hash = hash;
+        existing.chunkCount = chunkCount;
+        existing.mimeType = type;
+        existing.size = file.size;
+        await request2Promise(this.db.transaction(["folders"], "readwrite").objectStore("folders").put(existing));
+      }
+    } else {
+      // 新文件上传
+      imageId = this.createFileId();
+      const imageMeta: StoredImageMeta = {
+        id: imageId,
+        type: "image",
+        name: file.name,
+        parentId,
+        url,
+        chunkCount,
+        mimeType: type,
+        hash,
+        size: file.size,
+      };
+      await request2Promise(this.db.transaction(["folders"], "readwrite").objectStore("folders").add(imageMeta));
     }
-    const chunksMeta: StoredChunkMeta[] = [];
+
+    // 2. 逐个上传缺失的分片
     for (let i = 0; i < chunkCount; i++) {
-      chunksMeta.push({
-        id: this.createChunkedId(imageMeta.id, i),
-        imageId: imageMeta.id,
+      if (uploadedIndices.has(i)) continue;
+
+      const chunkData = file.slice(i * chunkSize, (i + 1) * chunkSize);
+      const chunkMeta: StoredChunkMeta = {
+        id: this.createChunkedId(imageId, i),
+        imageId,
         index: i,
-        data: imageBlob.slice(i * chunkSize, (i + 1) * chunkSize)
-      })
+        data: chunkData
+      };
+      
+      await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').put(chunkMeta));
+      if (i % 5 === 0 || i === chunkCount - 1) {
+        console.log(`上传进度: ${i + 1}/${chunkCount}`);
+      }
     }
-    await this.storeChunks(chunksMeta);
-    await request2Promise(this.db.transaction(["folders"], 'readwrite').objectStore('folders').add(imageMeta))
-    console.log(Date.now(), 'uploadImage success')
-}
+
+    console.log(Date.now(), 'uploadImage success', file.name);
+  }
+
   //根据url制作本地url
   createLocalURLByImageURL = async (url: string) => {
     await this.ensureReady()
@@ -314,8 +415,8 @@ export interface StoredMetaBase {
 
 export interface StoredImageMeta extends StoredMetaBase {
   type: "image";
-  // hash: string;
-  // size: number;
+  hash: string;
+  size: number;
   chunkCount: number;
   mimeType: string;
 }
@@ -325,7 +426,7 @@ export interface StoredFolderMeta extends StoredMetaBase {
 }
 
 export interface StoredChunkMeta {
-  id: number;
+  id: string | number;
   imageId: number;
   index: number;
   data: Blob;

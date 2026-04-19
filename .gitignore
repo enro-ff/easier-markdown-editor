@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 playwright-report/
+test-results/
 .gemini/
 
 # Editor directories and files
