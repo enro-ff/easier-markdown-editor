@@ -42,6 +42,7 @@ export class ImagefolderStore {
   private db!: IDBDatabase;
   private idx: number = 0;
   private urlMap: Map<string, string> = new Map();
+  private static _uploadQueues: Map<string, Promise<void>> = new Map();
   private ready: Promise<void>
   constructor(dbPromise: Promise<IDBDatabase>) {
     // 确保 ready 能够被 await
@@ -189,19 +190,55 @@ export class ImagefolderStore {
     await request2Promise(store.put(folderMeta));
   }
 
-  //上传图片（支持断点续传）
-  async uploadImage(file: File, parentId: number) {
-    await this.ensureReady();
-    console.log(Date.now(), 'uploadImage start', file.name);
+  private _getLockKey(parentId: number, name: string) {
+    return `${parentId}:${name}`;
+  }
+
+  //上传图片（支持断点续传与并发处理）
+  async uploadImage(file: File, parentId: number): Promise<void> {
+    const lockKey = this._getLockKey(parentId, file.name);
     
-    const url = await this.createUrlByParentId(parentId, file.name);
+    // 获取当前的 Promise 链，如果没有则从 resolved 开始
+    const previousPromise = ImagefolderStore._uploadQueues.get(lockKey) || Promise.resolve();
+    
+    // 创建一个新的 Promise，它会等待上一个任务完成
+    const currentPromise = previousPromise.then(async () => {
+      try {
+        await this.ensureReady();
+        const url = await this.createUrlByParentId(parentId, file.name);
+        await this._doUploadImage(file, parentId, url);
+      } catch (e) {
+        console.error("上传失败", e);
+        throw e;
+      }
+    });
+
+    // 将 currentPromise 放入 Map，作为下一个任务的 previousPromise
+    ImagefolderStore._uploadQueues.set(lockKey, currentPromise);
+
+    try {
+      return await currentPromise;
+    } finally {
+      // 使用原子操作清理队列：只有当当前 Promise 仍然是队列中的值时才删除
+      // 这确保了如果有新任务加入，我们不会误删新的 Promise
+      const currentInMap = ImagefolderStore._uploadQueues.get(lockKey);
+      if (currentInMap === currentPromise) {
+        // 再次检查以确保没有其他任务在此期间加入
+        ImagefolderStore._uploadQueues.delete(lockKey);
+      }
+    }
+  }
+
+  private async _doUploadImage(file: File, parentId: number, url: string): Promise<void> {
+    console.log(Date.now(), 'uploadImage start', file.name);
     const hash = await hashBlob(file);
     const type = file.type || "image/jpeg";
     const chunkCount = Math.ceil(file.size / chunkSize);
 
     // 1. 查找现有元数据
+    let existing: StoredImageMeta | undefined;
     const folderStore = this.db.transaction(["folders"], "readonly").objectStore("folders");
-    const existing = await request2Promise(folderStore.index("url").get(url)) as StoredImageMeta | undefined;
+    existing = await request2Promise(folderStore.index("url").get(url)) as StoredImageMeta | undefined;
 
     let imageId: number;
     let uploadedIndices = new Set<number>();
@@ -222,9 +259,8 @@ export class ImagefolderStore {
           console.log('文件已存在且完整，跳过上传');
           return;
         }
-        console.log(`发现部分上传文件，已完成 ${uploadedIndices.size}/${chunkCount} 分片`);
+        console.log(`发现部分上传文件: ${file.name}, 已完成 ${uploadedIndices.size}/${chunkCount} 分片`);
       } else {
-        // 哈希不匹配，说明文件内容变了，删除旧分片并更新元数据
         console.log('文件内容已更改，重新开始上传');
         await this.deleteChunksByImageId(imageId);
         uploadedIndices.clear();
@@ -248,7 +284,15 @@ export class ImagefolderStore {
         hash,
         size: file.size,
       };
-      await request2Promise(this.db.transaction(["folders"], "readwrite").objectStore("folders").add(imageMeta));
+      try {
+        await request2Promise(this.db.transaction(["folders"], "readwrite").objectStore("folders").add(imageMeta));
+      } catch (e: any) {
+        if (e.name === 'ConstraintError') {
+          console.warn("并发冲突：元数据已由其他进程创建，尝试切换到续传模式");
+          return this._doUploadImage(file, parentId, url);
+        }
+        throw e;
+      }
     }
 
     // 2. 逐个上传缺失的分片
@@ -265,10 +309,9 @@ export class ImagefolderStore {
       
       await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').put(chunkMeta));
       if (i % 5 === 0 || i === chunkCount - 1) {
-        console.log(`上传进度: ${i + 1}/${chunkCount}`);
+        console.log(`上传进度: ${file.name} ${i + 1}/${chunkCount}`);
       }
     }
-
     console.log(Date.now(), 'uploadImage success', file.name);
   }
 
@@ -401,9 +444,19 @@ export class ImagefolderStore {
 
 }
 
-export default (dbPromise: Promise<IDBDatabase>) => {
-  return new ImagefolderStore(dbPromise);
-}
+let instance: ImagefolderStore | null = null;
+let creatingInstance = false;
+
+export default (dbPromise: Promise<IDBDatabase>): ImagefolderStore => {
+  // 双重检查锁定模式，防止并发创建多个实例
+  if (!instance) {
+    if (!creatingInstance) {
+      creatingInstance = true;
+      instance = new ImagefolderStore(dbPromise);
+    }
+  }
+  return instance!;
+};
 
 export interface StoredMetaBase {
   id: number;
