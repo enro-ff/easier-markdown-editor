@@ -1,159 +1,132 @@
 # Easier Markdown Editor
 
-## 项目介绍
+一款**纯前端**的沉浸式 Markdown 编辑器：支持在浏览器中**直接管理本地 `.md` 文件**，并集成 **AI 驱动的打印主题（CSS）生成**与 **A4 PDF 导出**。
 
-Easier Markdown Editor 是一个使用 Vite + React + TypeScript 构建的简易 Markdown 编辑器，致力于提供简单直观的 Markdown 编写体验。
+- **Tech Stack**: React 19, TypeScript, CodeMirror 6, IndexedDB, Web-LLM, Ant Design
+- **场景**: 本地笔记/技术文档写作、离线资料整理、A4 打印排版
 
-## 功能特性
+## Demo
 
-### 核心功能
+- 在线体验：TODO
+- 演示视频 / 截图：见下方
 
-- **双面板编辑模式**：提供所见即所得的预览模式与纯粹的代码编辑面板
-- **丰富的 Markdown 支持**：
-  - 六级标题
-  - 斜体 (*斜体*)
-  - 加粗 (**加粗**)
-  - 删除线 (~~删除线~~)
-  - 超链接 ([链接文本](URL))
-  - 图片 (!\[图片描述]\(图片URL null))
-  - 代码块
-- **文件管理**：支持创建、编辑、删除文件和文件夹
-- **本地存储**：使用 IndexedDB 进行本地存储，确保数据不会丢失
-- **图片管理**：
-  - 支持图片上传和管理
-  - 基于 OpenSeadragon 的高性能大图查看器
-  - 支持深度缩放和平移浏览
-  - 图片分片上传与断点续传
+## Screenshots
 
-### 技术特性
+> 建议放 3 张：主编辑器（双栏）、图片文件夹（离线预览）、PDF 预览（A4 + AI CSS）。
 
-- **现代化技术栈**：React 19 + TypeScript + Vite
-- **高性能编辑器**：基于 CodeMirror 6 构建的代码编辑器
-- **美观的界面**：使用 Ant Design 组件库，提供简洁现代的用户界面
-- **响应式设计**：适配不同屏幕尺寸
-- **类型安全**：完整的 TypeScript 类型定义
+- TODO: `docs/screenshots/editor.png`
+- TODO: `docs/screenshots/image-folder.png`
+- TODO: `docs/screenshots/pdf-preview.png`
+
+## Features
+
+- **双栏编辑**：编辑区 / 预览区、双向同步滚动
+- **本地文件**：新建 / 打开 / 保存 / 另存为（含兼容降级）
+- **图片文件夹**：图片上传、文件夹上传、离线预览（Object URL）
+- **大图查看**：OpenSeadragon 深度缩放与平移浏览
+- **PDF 导出**：A4 预览、打印、AI 生成主题 CSS
+
+## 项目亮点（适配简历）
+
+- **核心编辑器与双栏状态同步（CodeMirror 6 + React）**  
+  基于 CodeMirror 6 构建“编辑 / 预览”双栏界面；通过计算“目标侧当前滚动位置对应的行号 + 行内滚动比例”，再映射到另一侧的同一行块高度，实现**平滑、无跳动的双向同步滚动**（含锁与 RAF 解耦避免循环触发）。
+
+- **文件系统交互（File System Access API）与优雅降级**  
+  在支持 `showOpenFilePicker/showSaveFilePicker` 的浏览器中实现**本地文件直接读写**；并检测兼容性，在不支持的环境下自动降级为传统 `<input type="file">` 导入与 Blob 下载导出，保证功能可用性与用户体验一致。
+
+- **纯前端图片图床（IndexedDB）与离线预览**  
+  以 IndexedDB 设计并实现图片存储系统：  
+  - **4MB 分块**写入 `chunks` store，解决大文件单次写入的性能/体积瓶颈  
+  - 基于 SHA-256（失败回退到 djb2）做内容哈希校验，支持**断点续传**与“同名同目录并发上传”队列化  
+  - 重组 Blob 后生成 **Object URL** 模拟本地路径，实现图片**离线渲染与预览**（超大文件返回 Blob 以避免内存爆炸）
+
+- **A4 PDF 导出与样式优化（window.print + Web-LLM）**  
+  将 CodeMirror Markdown 语法树解析为 HTML（支持链接/图片），注入 A4 打印样式并通过 `window.print()` 实现**纯前端无损导出 PDF**；同时引入 Web-LLM（浏览器端本地模型）支持用户用自然语言**动态生成 CSS 主题**并应用到打印/导出流程。
+
+## Architecture (Brief)
+
+- `EditorView`：双栏编辑器主视图（CodeMirror + 预览）
+- `useEditorSyncScroll`：双向同步滚动策略（行号 + 行内比例映射）
+- `useFileSave` + 菜单：File System Access API + 降级导入导出
+- `useIndexedDB`：IndexedDB 连接与 store 初始化
+- `folderStore`：图片/文件夹元数据 + 分块存储 + 断点续传 + Object URL
+- `useMd2pdf`：Markdown AST → HTML → A4 打印（`window.print`）
+- `aiGenCSS`：Web-LLM 本地模型生成打印 CSS
+
+## Project Structure
+
+```text
+easier-markdown-editor/
+├── public/
+└── src/
+    ├── components/
+    │   └── EditorView/
+    │       ├── Component/
+    │       │   └── FileDropdown/
+    │       │       ├── Component/
+    │       │       │   ├── GenPDF/
+    │       │       │   │   └── GenPDF.tsx              # PDF 预览/打印 + AI CSS
+    │       │       │   └── ImageFolder/
+    │       │       │       ├── ImageFolder.tsx         # 图片文件夹 UI（上传/预览）
+    │       │       │       └── OpenSeadragonViewer.tsx # 大图深度缩放预览
+    │       │       └── hooks/
+    │       │           └── useMenuItem.tsx             # 文件菜单（含降级逻辑）
+    │       ├── hooks/
+    │       │   ├── useEditorSyncScroll.ts              # 双栏同步滚动
+    │       │   ├── useFileSave.ts                      # 本地文件读写（FS Access）
+    │       │   ├── useIndexedDB.ts                     # IndexedDB 初始化/连接
+    │       │   └── useMd2pdf.tsx                       # Markdown → HTML → print
+    │       ├── utils/
+    │       │   ├── aiGenCSS.ts                         # Web-LLM 生成打印 CSS
+    │       │   └── folderStore.ts                      # 图床：分块/续传/Object URL
+    │       └── EditorView.tsx
+    ├── App.tsx
+    └── main.tsx
+```
 
 ## 技术栈
 
-| 技术           | 版本      | 用途              |
-| -------------- | --------- | ----------------- |
-| React          | ^19.2.0   | 前端框架          |
-| TypeScript     | ~5.9.3    | 类型系统          |
-| Vite           | ^7.2.4    | 构建工具          |
-| Ant Design     | ^6.2.0    | UI 组件库         |
-| CodeMirror     | ^6.0.0    | 代码编辑器        |
-| purrmd         | ^0.1.4    | Markdown 渲染     |
-| OpenSeadragon  | latest    | 深度缩放图像查看器 |
+- **React 19 + TypeScript**：组件化与类型安全
+- **CodeMirror 6**：编辑器内核与扩展能力
+- **IndexedDB**：本地持久化（文件句柄、图片元数据、分块数据）
+- **Web-LLM（@mlc-ai/web-llm）**：浏览器端本地模型推理（CSS 生成）
+- **Ant Design**：UI 组件与交互
+- **OpenSeadragon**：大图深度缩放预览
 
-## 快速开始
-
-### 克隆仓库
-
-```bash
-git clone https://github.com/ffxd/easier-markdown-editor.git
-cd easier-markdown-editor
-```
-
-### 安装依赖
+## 本地运行
 
 ```bash
 npm install
-```
-
-### 启动开发服务器
-
-```bash
 npm run dev
 ```
 
-### 构建生产版本
+## Scripts
 
 ```bash
-npm run build
+npm run dev        # 启动开发服务器
+npm run build      # 生产构建
+npm run preview    # 预览生产构建
+npm run lint       # ESLint
+npm run test       # Playwright e2e
 ```
 
-### 预览生产构建
+## 兼容性说明
+
+- **File System Access API**：Chromium 系浏览器体验最佳；不支持时会自动降级为导入/导出模式。
+- **IndexedDB**：主流现代浏览器支持（包含部分内核前缀兜底）。
+- **Web-LLM**：首次使用需要加载模型与 wasm 资源；低性能设备可能耗时较长。
+
+## Notes
+
+- **本地文件权限**：使用 File System Access API 时，浏览器会基于站点权限控制读写；必要时需手动授予权限。
+- **大文件图片**：重组 Blob 并生成 Object URL 可能产生较高内存占用；实现中对超大文件提供了 Blob 返回路径以降低风险。
+
+## 测试
 
 ```bash
-npm run preview
+npm run test
 ```
-
-## 项目结构
-
-```
-easier-markdown-editor/
-├── public/             # 静态资源
-├── src/                # 源代码
-│   ├── Icons/          # 图标组件
-│   ├── components/     # 组件
-│   │   └── EditorView/ # 编辑器主组件
-│   │       ├── Component/            # 子组件
-│   │       │   └── FileDropdown/     # 文件操作组件
-│   │       │       └── Component/
-│   │       │           └── ImageFolder/  # 图片文件夹组件
-│   │       │               ├── hooks/        # 图片相关 Hooks
-│   │       │               ├── ImageFolder.tsx
-│   │       │               └── OpenSeadragonViewer.tsx  # 大图查看器
-│   │       ├── extentions/    # CodeMirror 扩展
-│   │       ├── hooks/         # 自定义 Hooks
-│   │       ├── utils/         # 工具函数
-│   │       ├── EditorView.css # 样式文件
-│   │       └── EditorView.tsx # 主编辑器组件
-│   ├── App.css         # 应用样式
-│   ├── App.tsx         # 应用主组件
-│   ├── index.css       # 全局样式
-│   └── main.tsx        # 应用入口
-├── .gitignore          # Git 忽略文件
-├── LICENSE             # 许可证
-├── README.md           # 项目文档
-├── package.json        # 项目配置
-├── tsconfig.json       # TypeScript 配置
-└── vite.config.js      # Vite 配置
-```
-
-## 核心功能介绍
-
-### 编辑器组件
-
-- **EditorView\.tsx**：编辑器主组件，包含编辑面板和预览面板
-- **FileDropdown.tsx**：文件下拉菜单，用于文件操作
-- **ImageFolder.tsx**：图片文件夹组件，用于管理图片
-- **OpenSeadragonViewer.tsx**：基于 OpenSeadragon 的高性能大图查看器，支持深度缩放
-
-### 存储管理
-
-- **folderStore.ts**：文件夹和文件的存储管理（单例模式）
-- **imageStore.ts**：图片的存储管理
-- **useIndexedDB.ts**：IndexedDB 操作的自定义 Hook
-
-### 工具函数
-
-- **buildDataTree.ts**：构建文件和文件夹的树形结构
-- **useFileSave.ts**：文件保存的自定义 Hook
-- **useEditorSyncScroll.ts**：编辑器同步滚动的自定义 Hook
-- **hashBlob.ts**：文件哈希计算（SHA-256 / djb2 fallback）
-
-## 技术亮点
-
-### 图片处理
-
-- 使用 SHA-256 哈希算法进行文件完整性校验
-- 支持大文件分片上传（4MB 分片大小）
-- 实现断点续传功能
-- 并发安全的上传队列管理
-
-### 数据存储
-
-- 基于 IndexedDB 的本地持久化存储
-- 单例模式确保数据库连接唯一性
-- 支持文件和文件夹的 CRUD 操作
-
-### 性能优化
-
-- 异步初始化机制，避免阻塞渲染
-- Promise 链式调用管理并发任务
-- 内存优化：及时释放 ImageBitmap 资源
 
 ## 许可证
 
-本项目采用 MIT 许可证 - 详情请参阅 [LICENSE](LICENSE) 文件
+MIT License，详见 [LICENSE](LICENSE)。
