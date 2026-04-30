@@ -105,12 +105,6 @@ export class ImagefolderStore {
     return `${imageId}-${index}`;
   }
 
-  private async storeChunks(chunksMeta: StoredChunkMeta[]) {
-    for (const meta of chunksMeta) {
-      await request2Promise(this.db.transaction(['chunks'], 'readwrite').objectStore('chunks').put(meta))
-    }
-  }
-
   private async deleteChunksByImageId(imageId: number) {
     return new Promise<void>((resolve, reject) => {
       const transaction = this.db.transaction(['chunks'], 'readwrite');
