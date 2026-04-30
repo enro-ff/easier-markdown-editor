@@ -40,7 +40,25 @@ const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
       // 但为了 OpenSeadragon 的自定义加载器，我们仍需要引用它。
       imageBitmapRef.current = resolvedBitmap;
 
-      let tileSource: any;
+      type TileSourceBounds = Readonly<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }>;
+      type CustomLoaderTile = Readonly<{ sourceBounds: TileSourceBounds }>;
+      type CustomTileLoaderHost = Readonly<{
+        setCustomTileLoader: (
+          loader: (
+            tile: CustomLoaderTile,
+            callback: (canvas: HTMLCanvasElement) => void,
+          ) => void,
+        ) => void;
+      }>;
+
+      type ViewerOptions = Parameters<typeof OpenSeadragon>[0];
+      type TileSources = ViewerOptions["tileSources"];
+      let tileSource: TileSources;
 
       if (src instanceof Blob) {
         if (!resolvedBitmap) return;
@@ -56,7 +74,6 @@ const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
         tileSource = {
           type: "image",
           url: src,
-          buildPyramid: false,
         };
       }
 
@@ -87,8 +104,8 @@ const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
         viewer.addHandler("open", () => {
           const tiledImage = viewer.world.getItemAt(0);
           if (tiledImage) {
-            // @ts-ignore - OpenSeadragon types might not include setCustomTileLoader
-            tiledImage.setCustomTileLoader((tile: any, callback: (canvas: HTMLCanvasElement) => void) => {
+            (tiledImage as unknown as CustomTileLoaderHost).setCustomTileLoader(
+              (tile: CustomLoaderTile, callback: (canvas: HTMLCanvasElement) => void) => {
               const canvas = document.createElement("canvas");
               canvas.width = tile.sourceBounds.width;
               canvas.height = tile.sourceBounds.height;
@@ -108,7 +125,8 @@ const OpenSeadragonViewer: React.FC<OpenSeadragonViewerProps> = ({ src }) => {
                 );
               }
               callback(canvas);
-            });
+              },
+            );
           }
         });
       }

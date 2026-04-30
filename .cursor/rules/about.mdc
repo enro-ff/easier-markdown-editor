@@ -1,0 +1,49 @@
+---
+alwaysApply: true
+---
+
+# Easier Markdown Editor
+
+一款**纯前端**的沉浸式 Markdown 编辑器：支持在浏览器中**直接管理本地 `.md` 文件**，并集成 **AI 驱动的打印主题（CSS）生成**与 **A4 PDF 导出**。
+
+- **Tech Stack**: React 19, TypeScript, CodeMirror 6, IndexedDB, Web-LLM, Ant Design
+
+## Project Structure
+
+```text
+easier-markdown-editor/
+├── public/
+└── src/
+    ├── components/
+    │   └── EditorView/
+    │       ├── Component/
+    │       │   └── FileDropdown/
+    │       │       ├── Component/
+    │       │       │   ├── GenPDF/
+    │       │       │   │   └── GenPDF.tsx              # PDF 预览/打印 + AI CSS
+    │       │       │   └── ImageFolder/
+    │       │       │       ├── ImageFolder.tsx         # 图片文件夹 UI（上传/预览）
+    │       │       │       └── OpenSeadragonViewer.tsx # 大图深度缩放预览
+    │       │       └── hooks/
+    │       │           └── useMenuItem.tsx             # 文件菜单（含降级逻辑）
+    │       ├── hooks/
+    │       │   ├── useEditorSyncScroll.ts              # 双栏同步滚动
+    │       │   ├── useFileSave.ts                      # 本地文件读写（FS Access）
+    │       │   ├── useIndexedDB.ts                     # IndexedDB 初始化/连接
+    │       │   └── useMd2pdf.tsx                       # Markdown → HTML → print
+    │       ├── utils/
+    │       │   ├── aiGenCSS.ts                         # Web-LLM 生成打印 CSS
+    │       │   └── folderStore.ts                      # 图床：分块/续传/Object URL
+    │       └── EditorView.tsx
+    ├── App.tsx
+    └── main.tsx
+```
+
+## Scripts
+
+```bash
+npm run dev        # 启动开发服务器
+npm run build      # 生产构建
+npm run preview    # 预览生产构建
+npm run lint       # ESLint
+```

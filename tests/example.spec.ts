@@ -1,55 +1,61 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('has title', async ({ page }) => {
-  await page.goto('/');
+test("has title", async ({ page }) => {
+  await page.goto("/");
 
-  // Expect a title "to contain" a substring.
   await expect(page).toHaveTitle(/easier-markdown-editor/);
 });
 
-test('header has correct text', async ({ page }) => {
-  await page.goto('/');
+test("header has correct text", async ({ page }) => {
+  await page.goto("/");
 
-  // Expect the header to contain the text.
-  const header = page.locator('header div').first();
-  await expect(header).toContainText('Easier Markdown Editor');
+  const header = page.locator("header div").first();
+  await expect(header).toContainText("Easier Markdown Editor");
 });
 
-test('footer has correct text', async ({ page }) => {
-  await page.goto('/');
+test("footer has correct text", async ({ page }) => {
+  await page.goto("/");
 
-  // Expect the footer to contain the text.
-  const footer = page.locator('footer');
-  await expect(footer).toContainText(/Easier Markdown Editor ©\d{4} Created by ffxd/);
+  const footer = page.locator("footer");
+  await expect(footer).toContainText(
+    /Easier Markdown Editor ©\d{4} Created by ffxd/,
+  );
 });
 
-test('sync scroll between code and preview', async ({ page }) => {
-  await page.goto('/');
+test("sync scroll between code and preview", async ({ page }) => {
+  await page.goto("/");
 
   // Setup CLS observer
   await page.evaluate(() => {
-    (window as any).clsValue = 0;
+    (window as unknown as { clsValue: number }).clsValue = 0;
     const observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as any) {
-        if (!entry.hadRecentInput) {
-          (window as any).clsValue += entry.value;
+      for (const entry of list.getEntries()) {
+        const layoutShift = entry as unknown as {
+          hadRecentInput?: boolean;
+          value?: number;
+        };
+        if (!layoutShift.hadRecentInput) {
+          (window as unknown as { clsValue: number }).clsValue +=
+            layoutShift.value ?? 0;
         }
       }
     });
-    observer.observe({ type: 'layout-shift', buffered: true });
+    observer.observe({ type: "layout-shift", buffered: true });
   });
 
-  // Generate large markdown
-  const largeMarkdown = Array.from({ length: 500 }, (_, i) => `Line ${i + 1}`).join('\n\n');
+  const largeMarkdown = Array.from(
+    { length: 500 },
+    (_, i) => `Line ${i + 1}`,
+  ).join("\n\n");
 
   // Find the code editor and insert text
-  const codeEditor = page.locator('.code-panel .cm-content');
+  const codeEditor = page.locator(".code-panel .cm-content");
   await codeEditor.click();
   await page.keyboard.insertText(largeMarkdown);
 
   // Wait for the preview to update
-  const codeScroller = page.locator('.code-panel .cm-scroller');
-  const previewScroller = page.locator('.preview-panel .cm-scroller');
+  const codeScroller = page.locator(".code-panel .cm-scroller");
+  const previewScroller = page.locator(".preview-panel .cm-scroller");
 
   // Scroll the code editor
   await codeScroller.evaluate((el) => {
@@ -62,7 +68,9 @@ test('sync scroll between code and preview', async ({ page }) => {
   // Get scroll positions and CLS
   const codeScrollTop = await codeScroller.evaluate((el) => el.scrollTop);
   const previewScrollTop = await previewScroller.evaluate((el) => el.scrollTop);
-  const clsValue = await page.evaluate(() => (window as any).clsValue);
+  const clsValue = await page.evaluate(
+    () => (window as unknown as { clsValue?: number }).clsValue ?? 0,
+  );
 
   console.log(`Code ScrollTop: ${codeScrollTop}`);
   console.log(`Preview ScrollTop: ${previewScrollTop}`);
@@ -70,8 +78,8 @@ test('sync scroll between code and preview', async ({ page }) => {
 
   // Report to Playwright
   test.info().annotations.push({
-    type: 'Scroll Metrics',
-    description: `Code: ${codeScrollTop}, Preview: ${previewScrollTop}, CLS: ${clsValue}`
+    type: "Scroll Metrics",
+    description: `Code: ${codeScrollTop}, Preview: ${previewScrollTop}, CLS: ${clsValue}`,
   });
 
   // Assert both have scrolled

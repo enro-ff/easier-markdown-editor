@@ -25,6 +25,11 @@ const ImageFolder = (props: ImageFolderProps) => {
   const [nameInput, setNameInput] = useState<string>("");
   const [previewImageSrc, setPreviewImageSrc] = useState<string | Blob>("");
 
+  async function generateTreeData() {
+    const treeData = await folderStore.queryAllFolders();
+    setFolderTree(treeData);
+  }
+
   const [, createFolderAction, isPending] = useActionState(async () => {
     try {
       await folderStore.createFolderByParentId(
@@ -45,26 +50,27 @@ const ImageFolder = (props: ImageFolderProps) => {
     if (folderSelected?.raw?.type === "image") {
       const url = folderSelected.raw.url;
       if (!url.startsWith("http") && !url.startsWith("https")) {
-        folderStore.createLocalURLByImageURL(url).then((localURL) => {
+        folderStore
+          .createLocalURLByImageURL(url)
+          .then((localURL: string | Blob | undefined) => {
           if (localURL) {
             setPreviewImageSrc(localURL);
           }
-        });
-      } else {
-        setPreviewImageSrc(url);
+          });
       }
-    } else {
-      setPreviewImageSrc("");
     }
   }, [folderSelected]);
 
   const folderClicked = async (node: TreeNode) => {
     setFolderSelected(node);
-  };
-
-  const generateTreeData = async () => {
-    const TreeData = await folderStore.queryAllFolders();
-    setFolderTree(TreeData);
+    if (node.raw.type === "image") {
+      const url = node.raw.url;
+      if (url.startsWith("http") || url.startsWith("https")) {
+        setPreviewImageSrc(url);
+      }
+      return;
+    }
+    setPreviewImageSrc("");
   };
 
   const openPicker = () => {
