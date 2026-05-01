@@ -1,6 +1,7 @@
 import { chunkSize } from "./constants";
 import { hashBlob } from "./hash";
 import { request2Promise } from "./idb";
+import { ObjectUrlStore } from "./objectUrl";
 import type {
   ImageDimensions,
   StoredChunkMeta,
@@ -63,7 +64,7 @@ type ImageOpsContext = Readonly<{
 export type LocalImageUrl = string | Blob | undefined;
 
 export class ImageOps {
-  private urlMap: Map<string, string> = new Map();
+  private objectUrls = new ObjectUrlStore();
   private static uploadQueues: Map<string, Promise<void>> = new Map();
   private ctx: ImageOpsContext;
 
@@ -240,7 +241,8 @@ export class ImageOps {
     await this.ctx.ensureReady();
     const db = this.ctx.getDb();
 
-    if (this.urlMap.has(url)) return this.urlMap.get(url);
+    const cached = this.objectUrls.get(url);
+    if (cached) return cached;
 
     const store = db.transaction(["folders"], "readonly").objectStore("folders");
     const files = (await request2Promise(
@@ -271,15 +273,10 @@ export class ImageOps {
       return imageBlob;
     }
 
-    const newURL = URL.createObjectURL(imageBlob) || "";
-    this.urlMap.set(url, newURL);
-    return newURL;
+    return this.objectUrls.setFromBlob(url, imageBlob);
   }
 
   releaseURL(url: string) {
-    const localUrl = this.urlMap.get(url) || "";
-    if (localUrl === "") return;
-    URL.revokeObjectURL(localUrl);
-    this.urlMap.delete(url);
+    this.objectUrls.release(url);
   }
 }
