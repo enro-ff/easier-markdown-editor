@@ -299,4 +299,9 @@ export class ImagefolderStore {
       | StoredFolderMeta
       | undefined;
   }
+
+  async getImageHeightFromSrc(url: string): Promise<[number | undefined, number | undefined]> {
+    const ops = await this.getImageOps();
+    return ops.getImageHeightFromSrc(url);
+  }
 }

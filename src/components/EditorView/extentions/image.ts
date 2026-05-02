@@ -24,20 +24,38 @@ class ImageWidget extends WidgetType {
   private src: string;
   private alt: string;
   private title: string;
+  private _estimatedHeight: number;
   constructor(src: string, alt?: string, title?: string) {
     super();
     this.src = src;
     this.alt = alt || "";
     this.title = title || "";
+    this._estimatedHeight = 100;
   }
 
-  toDOM() {
+  toDOM(view: EditorView) {
+    const contentWidth = view.contentDOM.clientWidth;
+
+    let height = contentWidth, width = contentWidth;
+
+    this._estimatedHeight = contentWidth;
+
+    
     const img = document.createElement("img");
     if (!this.src.startsWith('http:') && !this.src.startsWith('https:')) {
       folderStore
         .createLocalURLByImageURL(this.src)
         .then((url: string | Blob | undefined) => {
           img.src = typeof url === "string" ? url : this.src;
+          folderStore.getImageHeightFromSrc(this.src).then(([imageHeight, imageWidth]) => {
+            let caculatedHeight = 0;
+            if(imageWidth && imageHeight)caculatedHeight = imageHeight / imageWidth * contentWidth;
+            height = caculatedHeight || contentWidth;
+            img.style.height = `${height}px`;
+            img.style.width = `auto`;
+            this._estimatedHeight = height;
+            console.log(this.src,this._estimatedHeight)
+          });
         });
     } else {
       img.src = this.src;
@@ -59,6 +77,11 @@ class ImageWidget extends WidgetType {
 
   destroy(dom: HTMLElement) {
     super.destroy(dom);
+  }
+
+  get estimatedHeight() {
+    console.log(this.src,this._estimatedHeight, 'getEstimatedHeight')
+    return this._estimatedHeight;
   }
 }
 

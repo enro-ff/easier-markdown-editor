@@ -1,7 +1,7 @@
 import { chunkSize } from "./constants";
 import { hashBlob } from "./hash";
 import { request2Promise } from "./idb";
-import { ObjectUrlStore } from "./objectUrl";
+import { getImageHeightFromIndexedDB, ObjectUrlStore } from "./objectUrl";
 import type {
   ImageDimensions,
   StoredChunkMeta,
@@ -278,5 +278,10 @@ export class ImageOps {
 
   releaseURL(url: string) {
     this.objectUrls.release(url);
+  }
+
+  async getImageHeightFromSrc(url: string): Promise<[number | undefined, number | undefined]> {
+    const db = this.ctx.getDb();
+    return getImageHeightFromIndexedDB(db, url);
   }
 }
