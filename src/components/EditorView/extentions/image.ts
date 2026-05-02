@@ -36,25 +36,43 @@ class ImageWidget extends WidgetType {
   toDOM(view: EditorView) {
     const contentWidth = view.contentDOM.clientWidth;
 
-    let height = contentWidth, width = contentWidth;
+    let height = contentWidth;
 
     this._estimatedHeight = contentWidth;
 
     
     const img = document.createElement("img");
+
     if (!this.src.startsWith('http:') && !this.src.startsWith('https:')) {
       folderStore
         .createLocalURLByImageURL(this.src)
         .then((url: string | Blob | undefined) => {
-          img.src = typeof url === "string" ? url : this.src;
           folderStore.getImageHeightFromSrc(this.src).then(([imageHeight, imageWidth]) => {
+            img.src = typeof url === "string" ? url : this.src;
             let caculatedHeight = 0;
-            if(imageWidth && imageHeight)caculatedHeight = imageHeight / imageWidth * contentWidth;
+            if (imageWidth && imageHeight) caculatedHeight = imageHeight / imageWidth * contentWidth;
             height = caculatedHeight || contentWidth;
+            const needCompress =
+              Boolean(imageWidth && imageHeight) && height !== imageHeight;
+
             img.style.height = `${height}px`;
             img.style.width = `auto`;
             this._estimatedHeight = height;
-            console.log(this.src,this._estimatedHeight)
+
+            img.onload = () => {
+              img.onload = null;
+              if (needCompress && imageWidth && imageHeight) {
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                  canvas.height = height;
+                  canvas.width = (imageWidth / imageHeight) * height;
+                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                  img.src = canvas.toDataURL("image/png", 0.5);
+                }
+              }
+              void folderStore.releaseURL(this.src);
+            };
           });
         });
     } else {
