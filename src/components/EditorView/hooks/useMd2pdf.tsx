@@ -200,6 +200,13 @@ export function printHtmlToPdf(htmlElement: HTMLElement, title = "Document", tar
   const iframeDoc = iframe.contentWindow?.document;
   if (!iframeDoc) return;
 
+  // A4 210×297mm、内边距 20mm，按 96dpi 换算为 px 再除以 16 → rem（与 iframe 内 html 字号联动，比例固定）
+  const mmToRem = (mm: number) => ((mm / 25.4) * 96) / 16;
+  const pageWidthRem = mmToRem(210);
+  /** 297/210，屏幕预览用 vw 算最小页高，与宽度联动 */
+  const pageAspect = 297 / 210;
+  const rem = (mm: number) => `${mmToRem(mm)}rem`;
+
   iframeDoc.open();
   iframeDoc.write(`
     <!DOCTYPE html>
@@ -207,6 +214,10 @@ export function printHtmlToPdf(htmlElement: HTMLElement, title = "Document", tar
       <head>
         <title>${title}</title>
         <style>
+          /* 打印 / 兜底 */
+          html {
+            font-size: 16px;
+          }
           /* 通用样式 */
           body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -224,28 +235,40 @@ export function printHtmlToPdf(htmlElement: HTMLElement, title = "Document", tar
           a:hover { text-decoration: underline; }
           img { max-width: 100%; height: auto; border-radius: 4px; display: block; margin: 10px 0; }
 
-          /* A4 纸张模拟 */
+          /* A4 纸张模拟（宽高比 210:297，用 rem 与根字号绑定） */
           .markdown-print-body {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 20mm;
+            width: ${rem(210)};
+            min-height: ${rem(297)};
+            padding: ${rem(20)};
             margin: 0 auto;
             background: white;
             box-sizing: border-box;
           }
 
           @media screen {
+            /* 100vw = iframe 可视宽度；根字号与版心同比例，避免只改字、白纸仍卡 max(18px) 下的固定 px 宽 */
+            html {
+              font-size: clamp(8px, calc(100vw / ${pageWidthRem}), 28px);
+            }
             body { 
               background: #f0f2f5; 
-              padding: 20px 0;
+              padding: 1.25rem 0;
             }
+            /* 版心随 iframe 宽度变：宽 100%，高按 A4 比例；内边距按 20/210 与宽联动 */
             .markdown-print-body {
+              width: 100%;
+              max-width: 100%;
+              min-height: calc(100vw * ${pageAspect});
+              padding: calc(100vw * 20 / 210);
               box-shadow: 0 0 10px rgba(0,0,0,0.1);
               border: 1px solid #ddd;
             }
           }
 
           @media print {
+            html {
+              font-size: 16px;
+            }
             @page { 
               size: A4; 
               margin: 0; 
@@ -254,6 +277,9 @@ export function printHtmlToPdf(htmlElement: HTMLElement, title = "Document", tar
               background: white; 
             }
             .markdown-print-body {
+              width: ${rem(210)};
+              min-height: ${rem(297)};
+              padding: ${rem(20)};
               margin: 0;
               box-shadow: none;
               border: none;

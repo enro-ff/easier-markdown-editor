@@ -2,13 +2,24 @@ import { Layout, Button, Space } from 'antd'
 import { GithubOutlined } from '@ant-design/icons'
 import MDEditor from './components/EditorView/EditorView'
 import GiteeIcon from './Icons/GiteeIcon'
+import BackgroundPaper from './components/BackgroundPaper/BackgroundPaper'
 import './App.css'
-const { Header, Content, Footer } = Layout;
-
+const { Header, Content, Footer } = Layout
 
 function App() {
   return (
-    <Layout className="main-container" style={{ minHeight: '100vh', display: 'flex' }}>
+    <>
+      <BackgroundPaper />
+      <Layout
+        className="main-container"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          position: 'relative',
+          zIndex: 1,
+          backgroundColor: 'transparent',
+        }}
+      >
       <Header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white', padding: '0 24px' }}>
         <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Easier Markdown Editor</div>
         <Space>
@@ -35,10 +46,11 @@ function App() {
       <Content style={{ padding: '24px', overflow: 'hidden',display:'block', height: '80vh' }}>
         <MDEditor />
       </Content>
-      <Footer style={{ textAlign: 'center' }}>
+      <Footer style={{ textAlign: 'center', background: 'transparent' }}>
         Easier Markdown Editor ©{new Date().getFullYear()} Created by ffxd
       </Footer>
     </Layout>
+    </>
   )
 }
 
